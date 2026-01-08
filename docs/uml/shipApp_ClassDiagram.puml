@@ -61,6 +61,10 @@ class CommandFactory {
     {static} + exit(): String
 }
 
+class ShipAppUI {
+
+}
+
 
 abstract class JsonFactory
 
@@ -85,8 +89,7 @@ enum Course {
 ShipApp --> CommandFactory
 ShipApp --> SubmarineServer
 ShipApp --> ShipAppUIFacade
-ShipApp --> VisualisationWebservice
-ShipApp --> DatabaseService
+ShipApp <--> DatabaseService
 
 JsonFactory <|-- CommandFactory
 JsonFactory <|-- SubmarineControl
@@ -95,7 +98,7 @@ SubmarineServer "1" o-- "*" SubmarineSession
 SubmarineServer --> SubmarineControl
 SubmarineSession --> SubmarineControl
 
-ShipAppUIFacade --> DatabaseService
+ShipAppUIFacade --> ShipAppUI
 VisualisationWebservice --> DatabaseService
 
 @enduml
