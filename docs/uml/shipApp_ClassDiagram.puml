@@ -12,30 +12,30 @@ class ShipApp {
 class SubmarineServer {
     - logger: Logger
     - port: int
-    + launchSubmarine(): void
-    - acceptLoop(): void
+    + launchSubmarine()
+    - acceptLoop()
 }
 
 class SubmarineSession {
     - logger: Logger
     - submarineSocket: Socket
     - id: String
-    + run(): void
-    + sendPilot(pilotJson: String): void
-    - handleIncoming(json: String): void
+    + run()
+    + sendPilot(pilotJson: String)
+    - handleIncoming(json: String)
 }
 
 class DatabaseService {
     - logger: Logger
     - DatabaseService()
-    {static} + save(data: ArrayList<String>): void
+    {static} + save(data: ArrayList<String>)
     {static} + get(): ArrayList<String>
 }
 
 class VisualisationWebservice {
     - logger: Logger
-    + handle(exchange: HttpExchange): void
-    - setCorsHeader(exchange: HttpExchange): void
+    + handle(exchange: HttpExchange)
+    - setCorsHeader(exchange: HttpExchange)
 }
 
 class ShipAppUIFacade {
