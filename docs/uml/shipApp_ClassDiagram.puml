@@ -1,0 +1,79 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class ShipApp {
+    - logger: Logger
+    - socket: Socket
+    - port: int
+    + run()
+}
+
+class SubmarineServer {
+    - logger: Logger
+    + launchSubmarine(): void
+
+}
+
+class DatabaseService {
+    - logger: Logger
+    - DatabaseService()
+    {static} + save(data: ArrayList<String>): void
+    {static} + get(): ArrayList<String>
+}
+
+class VisualisationWebservice {
+    - logger: Logger
+    + handle(exchange: HttpExchange): void
+    - setCorsHeader(exchange: HttpExchange): void
+}
+
+class ShipAppUIFacade {
+    - logger: Logger
+}
+
+class SubmarineControl {
+    - SubmarineControl()
+    {static} + ready(id: String, pos: Vec, dir: Vec, depth: int, distance: int): String
+    {static} + message(type: String, text: String, pos: Vec): String
+    {static} + measure(vectors: ArrayList<Vec>): String
+    {static} + picture(id: String, pos: Vec, dir: Vec, picture: String): String
+    {static} + crash(id: String, message: String, sector: Vec2D, sunkPos: Vec): String
+    {static} + arise(id: String, aristePos: Vec): String
+}
+
+enum VehicleType {
+    ship
+    submarine
+}
+
+enum Rudder {
+    left
+    center
+    right
+}
+
+enum Course {
+    forward
+    backward
+}
+
+class CommandFactory {
+    - CommandFactory()
+    {static} + launch(name: String, typ: VehicleType, sector: Vec2D, dir: Vec2D): String
+    {static} + navigate(rudder: Rudder, course: Course): String
+    {static} + scan(): String
+    {static} + radar(): String
+    {static} + exit(): String
+}
+
+ShipApp --> CommandFactory
+ShipApp --> SubmarineServer
+ShipApp --> ShipAppUIFacade
+ShipApp --> VisualisationWebservice
+ShipApp --> DatabaseService
+
+SubmarineServer --> SubmarineControl
+ShipAppUIFacade --> DatabaseService
+VisualisationWebservice --> DatabaseService
+
+@enduml
