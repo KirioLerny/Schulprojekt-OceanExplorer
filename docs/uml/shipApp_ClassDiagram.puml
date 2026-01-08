@@ -1,17 +1,28 @@
 @startuml
 skinparam classAttributeIconSize 0
 
+
 class ShipApp {
     - logger: Logger
-    - socket: Socket
+    - oceanSocket: Socket
     - port: int
     + run()
 }
 
 class SubmarineServer {
     - logger: Logger
+    - port: int
     + launchSubmarine(): void
+    - acceptLoop(): void
+}
 
+class SubmarineSession {
+    - logger: Logger
+    - submarineSocket: Socket
+    - id: String
+    + run(): void
+    + sendPilot(pilotJson: String): void
+    - handleIncoming(json: String): void
 }
 
 class DatabaseService {
@@ -38,8 +49,21 @@ class SubmarineControl {
     {static} + measure(vectors: ArrayList<Vec>): String
     {static} + picture(id: String, pos: Vec, dir: Vec, picture: String): String
     {static} + crash(id: String, message: String, sector: Vec2D, sunkPos: Vec): String
-    {static} + arise(id: String, aristePos: Vec): String
+    {static} + arise(id: String, arisePos: Vec): String
 }
+
+class CommandFactory {
+    - CommandFactory()
+    {static} + launch(name: String, typ: VehicleType, sector: Vec2D, dir: Vec2D): String
+    {static} + navigate(rudder: Rudder, course: Course): String
+    {static} + scan(): String
+    {static} + radar(): String
+    {static} + exit(): String
+}
+
+
+abstract class JsonFactory
+
 
 enum VehicleType {
     ship
@@ -57,14 +81,6 @@ enum Course {
     backward
 }
 
-class CommandFactory {
-    - CommandFactory()
-    {static} + launch(name: String, typ: VehicleType, sector: Vec2D, dir: Vec2D): String
-    {static} + navigate(rudder: Rudder, course: Course): String
-    {static} + scan(): String
-    {static} + radar(): String
-    {static} + exit(): String
-}
 
 ShipApp --> CommandFactory
 ShipApp --> SubmarineServer
@@ -72,7 +88,13 @@ ShipApp --> ShipAppUIFacade
 ShipApp --> VisualisationWebservice
 ShipApp --> DatabaseService
 
+JsonFactory <|-- CommandFactory
+JsonFactory <|-- SubmarineControl
+
+SubmarineServer "1" o-- "*" SubmarineSession
 SubmarineServer --> SubmarineControl
+SubmarineSession --> SubmarineControl
+
 ShipAppUIFacade --> DatabaseService
 VisualisationWebservice --> DatabaseService
 
