@@ -1,0 +1,84 @@
+@startchen
+
+entity Ocean {
+}
+entity Sector {
+}
+
+entity Ship {
+}
+entity Submarine {
+}
+
+entity ShipScan {
+}
+entity ShipRadarMeasurement {
+}
+entity ShipRadarEcho {
+}
+
+entity SubmarineMeasure {
+}
+entity SubmarineMeasurePoint {
+}
+
+relationship HasSector {
+}
+relationship HasShip {
+}
+relationship Controls {
+}
+
+relationship ScanByShip {
+}
+relationship ScanInSector {
+}
+
+relationship RadarByShip {
+}
+relationship EchoOfRadar {
+}
+relationship EchoTargetsSector {
+}
+
+relationship MeasureBySubmarine {
+}
+relationship PointOfMeasure {
+}
+relationship PointInSector {
+}
+
+Ocean -1- HasSector
+HasSector -N- Sector
+
+Ocean -1- HasShip
+HasShip -N- Ship
+
+Ship -1- Controls
+Controls -N- Submarine
+
+Ship -1- ScanByShip
+ScanByShip -N- ShipScan
+
+Sector -1- ScanInSector
+ScanInSector -N- ShipScan
+
+Ship -1- RadarByShip
+RadarByShip -N- ShipRadarMeasurement
+
+ShipRadarMeasurement -1- EchoOfRadar
+EchoOfRadar -N- ShipRadarEcho
+
+Sector -1- EchoTargetsSector
+EchoTargetsSector -N- ShipRadarEcho
+
+Submarine -1- MeasureBySubmarine
+MeasureBySubmarine -N- SubmarineMeasure
+
+SubmarineMeasure -1- PointOfMeasure
+PointOfMeasure -N- SubmarineMeasurePoint
+
+Sector -1- PointInSector
+PointInSector -N- SubmarineMeasurePoint
+
+@endchen
