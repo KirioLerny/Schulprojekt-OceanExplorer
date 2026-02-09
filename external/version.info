@@ -1,0 +1,9 @@
+ Version 1.2:
+ - Anwendungen jetzt auf MacOS lauffaehig
+ 
+oceanserver 0.93
+- Pruefung auf gueltige Richtungsvektoren bei CmdLaunch
+- Bugfix: CmdLaunch - Richtungsvektor [0, -1] jetzt zulaessig
+
+submarine 0.93
+- Bugfix: alle Submarine Ausrichtungen beim Submit moeglich
