@@ -6,10 +6,7 @@ import ocean.model.Vec2D;
 import ocean.model.VehicleType;
 import org.json.JSONObject;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-/**
+/** <pre>
  * Factory-Klasse zum Erstellen von JSON-Befehlen für den OceanServer.
  *
  * Der OceanServer erwartet JSON-Nachrichten in einem bestimmten Format.
@@ -21,8 +18,6 @@ import java.util.Map;
  * - radar: Umgebung scannen (8 Nachbarsektoren)
  * - scan: Tiefenmessung im aktuellen Sektor
  * - exit: Verbindung beenden
- *
- * @author OceanExplorer Team
  */
 public final class CommandFactory {
 
@@ -40,16 +35,12 @@ public final class CommandFactory {
      * @return JSON-String für den OceanServer
      */
     public static String launch(String name, VehicleType type, Vec2D sector, Vec2D direction) {
-        // Baue JSON manuell - Feldnamen müssen exakt mit CmdLaunch.class übereinstimmen!
-        // typ (nicht type!), dir (nicht direction!)
-        StringBuilder json = new StringBuilder();
-        json.append("{");
-        json.append("\"cmd\":\"launch\",");
-        json.append("\"name\":\"").append(name).append("\",");
-        json.append("\"typ\":\"").append(type.name()).append("\",");  // typ, nicht type!
-        json.append("\"sector\":{\"vec2\":[").append(sector.getX()).append(",").append(sector.getY()).append("]},");
-        json.append("\"dir\":{\"vec2\":[").append(direction.getX()).append(",").append(direction.getY()).append("]}");  // dir, nicht direction!
-        json.append("}");
+        JSONObject json = new JSONObject();
+        json.put("cmd", "launch");
+        json.put("name", name);
+        json.put("typ", type.name());  // Protokoll verwendet "typ", nicht "type"
+        json.put("sector", sector.toJson());  // Vec2D hat toJson() Methode
+        json.put("dir", direction.toJson());  // Vec2D hat toJson() Methode
         return json.toString();
     }
 

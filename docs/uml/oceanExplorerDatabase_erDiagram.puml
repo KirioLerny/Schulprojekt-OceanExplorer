@@ -1,52 +1,88 @@
 @startchen
 
+' =========================
+' ENTITIES (persistente Daten)
+' =========================
+
 entity Ocean {
 }
+
 entity Sector {
 }
 
 entity Ship {
 }
+
 entity Submarine {
 }
 
 entity ShipScan {
 }
-entity ShipRadarMeasurement {
-}
-entity ShipRadarEcho {
+
+entity ShipPosition {
 }
 
-entity SubmarineMeasure {
+entity SubmarineDive {
 }
-entity SubmarineMeasurePoint {
+
+entity SubmarineReadyStatus {
 }
+
+entity SubmarineMeasurementPoint {
+}
+
+entity SubmarinePhoto {
+}
+
+entity Accident {
+}
+
+' =========================
+' RELATIONSHIPS
+' =========================
 
 relationship HasSector {
 }
 relationship HasShip {
 }
+
 relationship Controls {
 }
 
 relationship ScanByShip {
 }
-relationship ScanInSector {
+relationship ScanOfSector {
 }
 
-relationship RadarByShip {
+relationship HasPosition {
 }
-relationship EchoOfRadar {
-}
-relationship EchoTargetsSector {
+relationship PositionInSector {
 }
 
-relationship MeasureBySubmarine {
+relationship HasDive {
 }
-relationship PointOfMeasure {
+
+relationship HasReadyStatus {
 }
-relationship PointInSector {
+
+relationship HasMeasurementPoint {
 }
+relationship MeasurePointInSector {
+}
+
+relationship HasPhoto {
+}
+
+relationship AccidentOfShip {
+}
+relationship AccidentOfSubmarine {
+}
+relationship AccidentInSector {
+}
+
+' =========================
+' CARDINALITIES
+' =========================
 
 Ocean -1- HasSector
 HasSector -N- Sector
@@ -56,29 +92,46 @@ HasShip -N- Ship
 
 Ship -1- Controls
 Controls -N- Submarine
+' (fachlich: max. 4 Submarines pro Ship – als Constraint, nicht als Chen-Kardinalität)
 
 Ship -1- ScanByShip
 ScanByShip -N- ShipScan
 
-Sector -1- ScanInSector
-ScanInSector -N- ShipScan
+Sector -1- ScanOfSector
+ScanOfSector -N- ShipScan
 
-Ship -1- RadarByShip
-RadarByShip -N- ShipRadarMeasurement
+Ship -1- HasPosition
+HasPosition -N- ShipPosition
 
-ShipRadarMeasurement -1- EchoOfRadar
-EchoOfRadar -N- ShipRadarEcho
+Sector -1- PositionInSector
+PositionInSector -N- ShipPosition
 
-Sector -1- EchoTargetsSector
-EchoTargetsSector -N- ShipRadarEcho
+Submarine -1- HasDive
+HasDive -N- SubmarineDive
 
-Submarine -1- MeasureBySubmarine
-MeasureBySubmarine -N- SubmarineMeasure
+SubmarineDive -1- HasReadyStatus
+HasReadyStatus -N- SubmarineReadyStatus
 
-SubmarineMeasure -1- PointOfMeasure
-PointOfMeasure -N- SubmarineMeasurePoint
+SubmarineDive -1- HasMeasurementPoint
+HasMeasurementPoint -N- SubmarineMeasurementPoint
 
-Sector -1- PointInSector
-PointInSector -N- SubmarineMeasurePoint
+Sector -1- MeasurePointInSector
+MeasurePointInSector -N- SubmarineMeasurementPoint
+' (Messpunkt hat absolute 3D-Koordinaten; Zuordnung zu Sector ist optional/ableitbar, aber für Abfragen hilfreich)
+
+SubmarineDive -1- HasPhoto
+HasPhoto -N- SubmarinePhoto
+' (Foto: PNG -> Hex-String, Speicherung in DB)
+
+Ship -1- AccidentOfShip
+AccidentOfShip -N- Accident
+' (Unfallpositionen Schiff)
+
+Submarine -1- AccidentOfSubmarine
+AccidentOfSubmarine -N- Accident
+' (Unfallpositionen Submarine)
+
+Sector -1- AccidentInSector
+AccidentInSector -N- Accident
 
 @endchen

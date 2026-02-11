@@ -76,15 +76,7 @@ public class OceanServerClient {
         connected = true;
 
         System.out.println("[DEBUG] Verbindung hergestellt!");
-
-        // Server sendet automatisch Config-Nachricht nach Verbindung
-        String configMsg = in.readLine();
-        System.out.println("[DEBUG] Server Config: " + configMsg);
-
-        if (configMsg != null && configMsg.contains("\"cmd\":\"config\"")) {
-            JSONObject config = new JSONObject(configMsg);
-            System.out.println("[DEBUG] OceanServer Konfiguration empfangen");
-        }
+        logger.info("Verbunden mit OceanServer: {}:{}", host, port);
     }
 
     /**
@@ -124,10 +116,19 @@ public class OceanServerClient {
         String response = sendCommand(command);
 
         JSONObject json = new JSONObject(response);
-        boolean success = json.optString("status", "").equals("ok");
+
+        // Server antwortet mit "cmd":"launched" bei Erfolg
+        String cmd = json.optString("cmd", "");
+        boolean success = cmd.equals("launched");
 
         if (success) {
             logger.info("Schiff '{}' erfolgreich gestartet bei {}", name, sector);
+
+            // WICHTIG: Server sendet nach "launched" noch eine "move2d" Nachricht
+            // Diese muss gelesen werden, sonst blockiert der Buffer!
+            String move2dResponse = in.readLine();
+            System.out.println("<<< Empfangen: " + move2dResponse);
+            logger.debug("Launch gefolgt von move2d (ignoriert)");
         } else {
             String error = json.optString("error", "Unbekannter Fehler");
             logger.error("Launch fehlgeschlagen: {}", error);
@@ -150,14 +151,17 @@ public class OceanServerClient {
 
         JSONObject json = new JSONObject(response);
 
-        if (json.has("error")) {
-            logger.error("Navigate fehlgeschlagen: {}", json.getString("error"));
+        // Protokoll: Server antwortet mit "cmd":"move2d"
+        String cmd = json.optString("cmd", "");
+        if (!cmd.equals("move2d")) {
+            String error = json.optString("error", "Unbekannter Fehler");
+            logger.error("Navigate fehlgeschlagen: {}", error);
             return null;
         }
 
-        // Antwort enthält neue Position und Richtung
-        Vec2D newPosition = Vec2D.fromJson(json.getJSONArray("sector"));
-        Vec2D newDirection = Vec2D.fromJson(json.getJSONArray("direction"));
+        // Protokoll: Felder sind "sector" und "dir" (als vec2)
+        Vec2D newPosition = Vec2D.fromJson(json.getJSONObject("sector"));
+        Vec2D newDirection = Vec2D.fromJson(json.getJSONObject("dir"));
 
         logger.debug("Schiff bewegt zu {} mit Richtung {}", newPosition, newDirection);
 
@@ -177,12 +181,16 @@ public class OceanServerClient {
         JSONObject json = new JSONObject(response);
         List<RadarEcho> echoes = new ArrayList<>();
 
-        if (json.has("error")) {
-            logger.error("Radar fehlgeschlagen: {}", json.getString("error"));
+        // Protokoll: Server antwortet mit "cmd":"radarresponse"
+        String cmd = json.optString("cmd", "");
+        if (!cmd.equals("radarresponse")) {
+            String error = json.optString("error", "Unbekannter Fehler");
+            logger.error("Radar fehlgeschlagen: {}", error);
             return echoes;
         }
 
-        JSONArray echoArray = json.getJSONArray("echoes");
+        // Protokoll: Feld heißt "echos" (nicht "echoes")
+        JSONArray echoArray = json.getJSONArray("echos");
         for (int i = 0; i < echoArray.length(); i++) {
             JSONObject echoJson = echoArray.getJSONObject(i);
             RadarEcho echo = RadarEcho.fromJson(echoJson);
@@ -207,17 +215,25 @@ public class OceanServerClient {
 
         JSONObject json = new JSONObject(response);
 
-        if (json.has("error")) {
-            logger.error("Scan fehlgeschlagen: {}", json.getString("error"));
+        // Protokoll: Server antwortet mit "cmd":"scanned"
+        String cmd = json.optString("cmd", "");
+        if (!cmd.equals("scanned")) {
+            String error = json.optString("error", "Unbekannter Fehler");
+            logger.error("Scan fehlgeschlagen: {}", error);
             return null;
         }
 
-        Vec2D sector = Vec2D.fromJson(json.getJSONArray("sector"));
+        // Protokoll: Felder sind "depth" und "stddev"
+        // Aktueller Sektor muss aus vorheriger Position bekannt sein
+        // oder wir erstellen einen Dummy-Sector (0,0)
         int depth = json.getInt("depth");
-        float stdDev = json.getFloat("deviation");
+        float stdDev = (float) json.getDouble("stddev");
+
+        // TODO: Sektor aus aktuellem Schiffskontext holen
+        Vec2D sector = new Vec2D(0, 0);
 
         ScanResult result = new ScanResult(sector, depth, stdDev);
-        logger.debug("Scan: {}", result);
+        logger.debug("Scan: depth={}, stddev={}", depth, stdDev);
 
         return result;
     }
@@ -249,7 +265,7 @@ public class OceanServerClient {
     }
 
     /**
-     * Prüft ob eine Verbindung besteht.
+     * Prüft, ob eine Verbindung besteht.
      *
      * @return true wenn verbunden
      */

@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Scanner;
 
 /**
  * Hauptklasse der ShipApp - Einstiegspunkt der Anwendung.
@@ -29,31 +28,33 @@ public class Main {
     /** Standard-Host des OceanServers */
     private static final String OCEAN_SERVER_HOST = "localhost";
 
+    /** OceanServer Ship Port (fest) */
+    private static final int OCEAN_SERVER_SHIP_PORT = 8150;
+
+    /** OceanServer Submarine Port (fest) */
+    private static final int OCEAN_SERVER_SUBMARINE_PORT = 8151;
+
     /**
      * Haupteinstiegspunkt der Anwendung.
      *
-     * @param args Kommandozeilenargumente (optional: host port)
+     * @param args Kommandozeilenargumente (optional: host)
      */
     public static void main(String[] args) {
         logger.info("=== Ocean Explorer - ShipApp gestartet ===");
+        logger.info("Verbinde zu OceanServer:");
+        logger.info("  - Ship Port: {}", OCEAN_SERVER_SHIP_PORT);
+        logger.info("  - Submarine Port: {}", OCEAN_SERVER_SUBMARINE_PORT);
 
         String host = OCEAN_SERVER_HOST;
-        int port;
 
-        if (args.length >= 2) {
-            // Argumente aus Kommandozeile
+        if (args.length >= 1) {
+            // Host aus Kommandozeile
             host = args[0];
-            port = Integer.parseInt(args[1]);
-        } else {
-            // Interaktive Eingabe
-            Scanner scanner = new Scanner(System.in);
-            System.out.print("OceanServer Port eingeben: ");
-            port = scanner.nextInt();
         }
 
         // ShipApp starten
         Main app = new Main();
-        app.run(host, port);
+        app.run(host, OCEAN_SERVER_SHIP_PORT);
     }
 
     /**
