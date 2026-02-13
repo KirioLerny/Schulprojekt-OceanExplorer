@@ -1,6 +1,6 @@
 package ocean;
 
-import ocean.communication.oceanserver.OceanServerClient;
+import ocean.communication.oceanserver.OceanClient;
 import ocean.model.Ship;
 import ocean.model.Vec2D;
 import ocean.model.RadarEcho;
@@ -64,7 +64,7 @@ public class Main {
      * @param port OceanServer-Port
      */
     public void run(String host, int port) {
-        OceanServerClient client = new OceanServerClient(host, port);
+        OceanClient client = new OceanClient(host, port);
 
         try {
             // 1. Mit OceanServer verbinden

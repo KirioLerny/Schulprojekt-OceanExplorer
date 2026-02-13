@@ -28,9 +28,9 @@ import java.util.List;
  *
  * @author OceanExplorer Team
  */
-public class OceanServerClient {
+public class OceanClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(OceanServerClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(OceanClient.class);
 
     /** Server-Hostname oder IP-Adresse */
     private final String host;
@@ -56,7 +56,7 @@ public class OceanServerClient {
      * @param host Server-Hostname (z.B. "localhost")
      * @param port Server-Port (z.B. 3000)
      */
-    public OceanServerClient(String host, int port) {
+    public OceanClient(String host, int port) {
         this.host = host;
         this.port = port;
     }
