@@ -1,6 +1,7 @@
 package ocean;
 
 import ocean.communication.oceanserver.OceanClient;
+import ocean.logic.navigation.NavigationController;
 import ocean.model.Ship;
 import ocean.model.Vec2D;
 import ocean.model.RadarEcho;
@@ -105,10 +106,24 @@ public class Main {
                 logger.info("Tiefen-Scan: {}", scanResult);
             }
 
+            logger.info("=== Phase 1 Test erfolgreich! ===");
+            logger.info("");
+
+            // === PHASE 2: NAVIGATION ===
+            logger.info("=== Phase 2: Starte autonome Navigation ===");
+
+            NavigationController navigator = new NavigationController(client, ship);
+
+            // Erkunde 10 Sektoren
+            navigator.explore(10);
+
+            ship = navigator.getShip(); // Aktualisierte Position
+            logger.info("Finale Position: {}", ship);
+            logger.info("=== Phase 2 Test erfolgreich! ===");
+
             // TODO: Hier wird später die GUI gestartet
             // TODO: Hier wird später der SubmarineServer gestartet
 
-            logger.info("=== Phase 1 Test erfolgreich! ===");
 
         } catch (IOException e) {
             logger.error("Kommunikationsfehler: {}", e.getMessage());
