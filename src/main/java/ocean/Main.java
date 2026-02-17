@@ -1,6 +1,9 @@
 package ocean;
 
 import ocean.communication.oceanserver.OceanClient;
+import ocean.data.DatabaseConnection;
+import ocean.data.repository.ScanRepository;
+import ocean.data.repository.ShipRepository;
 import ocean.logic.navigation.NavigationController;
 import ocean.model.Ship;
 import ocean.model.Vec2D;
@@ -9,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -66,8 +70,21 @@ public class Main {
      */
     public void run(String host, int port) {
         OceanClient client = new OceanClient(host, port);
+        DatabaseConnection db = null;
+        ShipRepository shipRepo = null;
+        ScanRepository scanRepo = null;
 
         try {
+            // === PHASE 3: DATENBANK INITIALISIEREN ===
+            logger.info("=== Phase 3: Initialisiere Datenbank ===");
+            db = DatabaseConnection.getInstance();
+            db.connect();
+
+            shipRepo = new ShipRepository(db);
+            scanRepo = new ScanRepository(db);
+            logger.info("✅ Datenbank bereit");
+            logger.info("");
+
             // 1. Mit OceanServer verbinden
             client.connect();
 
@@ -93,6 +110,10 @@ public class Main {
 
             logger.info("Schiff gestartet: {}", ship);
 
+            // Schiff in Datenbank speichern (Phase 3)
+            long shipId = shipRepo.save(ship);
+            scanRepo.savePosition(shipId, startPosition, startDirection);
+
             // 3. Radar-Scan durchführen
             List<RadarEcho> radarEchoes = client.radar();
             logger.info("Radar-Scan ergab {} Sektoren:", radarEchoes.size());
@@ -104,6 +125,8 @@ public class Main {
             var scanResult = client.scan();
             if (scanResult != null) {
                 logger.info("Tiefen-Scan: {}", scanResult);
+                // Ersten Scan speichern
+                scanRepo.saveScan(shipId, startPosition, scanResult);
             }
 
             logger.info("=== Phase 1 Test erfolgreich! ===");
@@ -112,7 +135,7 @@ public class Main {
             // === PHASE 2: NAVIGATION ===
             logger.info("=== Phase 2: Starte autonome Navigation ===");
 
-            NavigationController navigator = new NavigationController(client, ship);
+            NavigationController navigator = new NavigationController(client, ship, shipRepo, scanRepo);
 
             // Erkunde 10 Sektoren
             navigator.explore(10);
@@ -120,6 +143,15 @@ public class Main {
             ship = navigator.getShip(); // Aktualisierte Position
             logger.info("Finale Position: {}", ship);
             logger.info("=== Phase 2 Test erfolgreich! ===");
+            logger.info("");
+
+            // === PHASE 3: STATISTIKEN ===
+            logger.info("=== Phase 3: Datenbank-Statistiken ===");
+            var scans = scanRepo.findScansByShip(shipId);
+            var positions = scanRepo.findPositionsByShip(shipId);
+            logger.info("Gespeicherte Scans: {}", scans.size());
+            logger.info("Gespeicherte Positionen: {}", positions.size());
+            logger.info("=== Phase 3 Test erfolgreich! ===");
 
             // TODO: Hier wird später die GUI gestartet
             // TODO: Hier wird später der SubmarineServer gestartet
@@ -127,9 +159,14 @@ public class Main {
 
         } catch (IOException e) {
             logger.error("Kommunikationsfehler: {}", e.getMessage());
+        } catch (SQLException e) {
+            logger.error("Datenbankfehler: {}", e.getMessage());
         } finally {
-            // Verbindung sauber trennen
+            // Verbindungen sauber trennen
             client.disconnect();
+            if (db != null) {
+                db.disconnect();
+            }
         }
 
         logger.info("=== ShipApp beendet ===");

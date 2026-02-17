@@ -1,6 +1,8 @@
 package ocean.logic.navigation;
 
 import ocean.communication.oceanserver.OceanClient;
+import ocean.data.repository.ScanRepository;
+import ocean.data.repository.ShipRepository;
 import ocean.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,11 +36,20 @@ public class NavigationController {
     /** Aktuelles Schiff */
     private Ship ship;
 
+    /** Schiffs-ID in der Datenbank */
+    private Long shipId;
+
     /** Besuchte Sektoren (zur Vermeidung von Duplikaten) */
     private final Set<Vec2D> visitedSectors = new HashSet<>();
 
     /** Kollisionsvermeidung */
     private final CollisionAvoidance collisionAvoidance;
+
+    /** Repository für Schiffsdaten (optional für Phase 3) */
+    private final ShipRepository shipRepository;
+
+    /** Repository für Scan-Daten (optional für Phase 3) */
+    private final ScanRepository scanRepository;
 
     /**
      * Erstellt einen neuen NavigationController.
@@ -47,9 +58,33 @@ public class NavigationController {
      * @param ship Zu steuerndes Schiff
      */
     public NavigationController(OceanClient client, Ship ship) {
+        this(client, ship, null, null);
+    }
+
+    /**
+     * Erstellt einen neuen NavigationController mit Datenbank-Persistierung.
+     *
+     * @param client OceanClient für Server-Kommunikation
+     * @param ship Zu steuerndes Schiff
+     * @param shipRepository Repository für Schiffsdaten (optional)
+     * @param scanRepository Repository für Scan-Daten (optional)
+     */
+    public NavigationController(OceanClient client, Ship ship,
+                                ShipRepository shipRepository,
+                                ScanRepository scanRepository) {
         this.client = client;
         this.ship = ship;
         this.collisionAvoidance = new CollisionAvoidance();
+        this.shipRepository = shipRepository;
+        this.scanRepository = scanRepository;
+
+        // Schiffs-ID aus Datenbank laden (falls Repositories vorhanden)
+        if (shipRepository != null) {
+            this.shipId = shipRepository.getIdByName(ship.getName());
+            if (shipId == null) {
+                logger.warn("Schiff {} nicht in Datenbank gefunden", ship.getName());
+            }
+        }
     }
 
     /**
@@ -111,6 +146,13 @@ public class NavigationController {
         if (scanResult != null) {
             logger.info("  → Tiefe: {} m, StdDev: {}", scanResult.getAverageDepth(), scanResult.getStandardDeviation());
             visitedSectors.add(currentPos);
+
+            // In Datenbank speichern (Phase 3)
+            if (scanRepository != null && shipId != null) {
+                scanRepository.saveScan(shipId, currentPos, scanResult);
+                logger.debug("Scan in Datenbank gespeichert");
+            }
+
             return true;
         } else {
             logger.error("Scan fehlgeschlagen!");
@@ -157,6 +199,13 @@ public class NavigationController {
         // Schiffsposition aktualisieren
         ship = new Ship(ship.getName(), result.position(), result.direction());
         logger.info("Neue Position: {} (Richtung: {})", result.position(), result.direction());
+
+        // Position in Datenbank speichern (Phase 3)
+        if (shipRepository != null && scanRepository != null && shipId != null) {
+            shipRepository.updatePosition(ship.getName(), result.position(), result.direction());
+            scanRepository.savePosition(shipId, result.position(), result.direction());
+            logger.debug("Position in Datenbank gespeichert");
+        }
 
         return true;
     }

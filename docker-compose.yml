@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # MySQL Datenbank für Ocean Explorer
+  mysql:
+    image: mysql:8.0
+    container_name: oceanexplorer-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: oceanexplorer_root
+      MYSQL_DATABASE: oceanexplorer
+      MYSQL_USER: oceanapp
+      MYSQL_PASSWORD: oceanpass123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - oceanexplorer-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-poceanexplorer_root"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  oceanexplorer-network:
+    driver: bridge
