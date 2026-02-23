@@ -156,10 +156,45 @@ public class Main {
             logger.info("Gespeicherte Scans: {}", scans.size());
             logger.info("Gespeicherte Positionen: {}", positions.size());
             logger.info("=== Phase 3 Test erfolgreich! ===");
+            logger.info("");
 
-            // TODO: Hier wird später die GUI gestartet
-            // TODO: Hier wird später der SubmarineServer gestartet
+            // === PHASE 4: SUBMARINE ===
+            logger.info("=== Phase 4: Starte Submarine-Integration ===");
 
+            SubmarineRepository subRepo = new SubmarineRepository(db);
+
+            // SubmarineServer starten (wartet auf Port 9000)
+            SubmarineServer subServer = new SubmarineServer(
+                    SubmarineServer.DEFAULT_PORT, subRepo, shipId);
+            subServer.start();
+            logger.info("SubmarineServer lauscht auf Port {}", SubmarineServer.DEFAULT_PORT);
+
+            // Kurz warten bis ServerSocket bereit ist
+            try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+
+            // Submarine via AppLauncher starten
+            // Die Ship-ID wie der OceanServer sie vergibt: "#<nr>#<name>"
+            String oceanShipId = "#1#" + ship.getName();
+            logger.info("Starte Submarine für Schiff: {}", oceanShipId);
+
+            boolean subStarted = AppLauncher.startSubmarine(
+                    "external",
+                    oceanShipId,
+                    "localhost",
+                    SubmarineServer.DEFAULT_PORT,
+                    OCEAN_SERVER_HOST,
+                    OCEAN_SERVER_SUBMARINE_PORT
+            );
+
+            if (subStarted) {
+                logger.info("✅ Submarine gestartet – warte auf Tauchgang (max. 60s)...");
+                try { Thread.sleep(60_000); } catch (InterruptedException ignored) {}
+            } else {
+                logger.warn("Submarine konnte nicht gestartet werden (submarine.jar in external/ vorhanden?)");
+            }
+
+            subServer.shutdown();
+            logger.info("=== Phase 4 abgeschlossen ===");
 
         } catch (IOException e) {
             logger.error("Kommunikationsfehler: {}", e.getMessage());

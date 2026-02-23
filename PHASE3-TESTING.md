@@ -1,12 +1,20 @@
-# 🧪 PHASE 3 TESTING - Schritt-für-Schritt Anleitung
+# 🧪 PHASE 3 + 4 TESTING - Schritt-für-Schritt Anleitung
 
-## 📋 Was wird in Phase 3 getestet?
+## 📋 Was wird getestet?
 
-Phase 3 fügt **MySQL-Datenbank-Persistierung** hinzu:
+**Phase 3 – MySQL-Datenbank-Persistierung:**
 - ✅ Speichern von Schiffsdaten
 - ✅ Speichern von Positionen
 - ✅ Speichern von Scan-Ergebnissen
 - ✅ Docker + MySQL Integration
+
+**Phase 4 – Submarine-Integration:**
+- ✅ SubmarineServer (TCP Port 9000)
+- ✅ Submarine starten via AppLauncher
+- ✅ 3D-Messpunkte speichern
+- ✅ Fotos (PNG) als BLOB speichern
+- ✅ Tauchgang-Tracking (start/end)
+- ✅ Unfall-Handling
 
 ---
 
@@ -63,7 +71,6 @@ mvn exec:java "-Dexec.mainClass=ocean.Main"
 [INFO] === Ocean Explorer - ShipApp gestartet ===
 [INFO] === Phase 3: Initialisiere Datenbank ===
 [INFO] ✅ Datenbank verbunden (Connection Pool aktiv)
-[INFO] ✅ Datenbank-Verbindung erfolgreich getestet
 [INFO] ✅ Datenbank bereit
 
 [INFO] Schiff gestartet: Ship[Explorer-220556 at (50,50) dir=(0,1)]
@@ -77,6 +84,20 @@ mvn exec:java "-Dexec.mainClass=ocean.Main"
 [INFO] Gespeicherte Scans: 11
 [INFO] Gespeicherte Positionen: 11
 [INFO] === Phase 3 Test erfolgreich! ===
+
+[INFO] === Phase 4: Starte Submarine-Integration ===
+[INFO] SubmarineServer lauscht auf Port 9000
+[INFO] Starte Submarine für Schiff: #1#Explorer-220556
+[INFO] ✅ Submarine gestartet – warte auf Tauchgang (max. 60s)...
+[INFO] Submarine verbunden von: /127.0.0.1:xxxxx
+[INFO] === Submarine bereit: #1#Explorer-220556_sub1 ===
+[INFO] >>> Sende Pilot-Route an #1#Explorer-220556_sub1
+[INFO] ✅ Submarine gespeichert: #1#Explorer-220556_sub1 (ID: 1)
+[INFO] ✅ Tauchgang gestartet (ID: 1)
+[INFO] ✅ N Messpunkte gespeichert
+[INFO] ✅ Foto gespeichert (XXXX Bytes)
+[INFO] Submarine #1#Explorer-220556_sub1 aufgetaucht ✅
+[INFO] === Phase 4 abgeschlossen ===
 ```
 
 ---
@@ -132,14 +153,37 @@ ORDER BY table_name;
 -- Alles löschen (Daten, nicht Struktur)
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE submarine_measurement_point;
+TRUNCATE TABLE submarine_photo;
 TRUNCATE TABLE submarine_dive;
 TRUNCATE TABLE submarine;
+TRUNCATE TABLE accident;
 TRUNCATE TABLE ship_scan;
 TRUNCATE TABLE ship_position;
 TRUNCATE TABLE ship;
 TRUNCATE TABLE sector;
 TRUNCATE TABLE ocean;
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ===== PHASE 4: SUBMARINE =====
+
+-- Alle Submarines
+SELECT * FROM submarine;
+
+-- Alle Tauchgänge
+SELECT sd.id, s.name, sd.status, sd.start_time, sd.end_time
+FROM submarine_dive sd
+JOIN submarine s ON s.id = sd.submarine_id
+ORDER BY sd.start_time DESC;
+
+-- 3D-Messpunkte eines Tauchgangs
+SELECT * FROM submarine_measurement_point ORDER BY timestamp DESC;
+
+-- Fotos (nur Metadaten, kein BLOB)
+SELECT id, dive_id, photo_format, LENGTH(photo_data) AS groesse_bytes, timestamp
+FROM submarine_photo;
+
+-- Unfälle
+SELECT * FROM accident;
 ```
 
 ---
@@ -212,6 +256,77 @@ docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SELEC
 |       1 |         1 | 50 | 50 |           -53 |     2.9409692 |
 |       1 |         2 | 50 | 51 |           -40 |     4.9972790 |
 ...
+```
+
+---
+
+### Test 4: Submarine wird gespeichert
+
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SELECT * FROM oceanexplorer.submarine;"
+```
+
+**Erwartung:**
+```
++----+------------------------------+---------+--------+
+| id | name                         | ship_id | active |
++----+------------------------------+---------+--------+
+|  1 | #1#Explorer-220556_sub1      |       1 |      0 |
++----+------------------------------+---------+--------+
+```
+(`active = 0` = Submarine aufgetaucht oder gesunken)
+
+---
+
+### Test 5: Tauchgang wird gespeichert
+
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SELECT id, submarine_id, status, start_time, end_time FROM oceanexplorer.submarine_dive;"
+```
+
+**Erwartung:**
+```
++----+--------------+----------+---------------------+---------------------+
+| id | submarine_id | status   | start_time          | end_time            |
++----+--------------+----------+---------------------+---------------------+
+|  1 |            1 | SURFACED | 2026-02-24 ...      | 2026-02-24 ...      |
++----+--------------+----------+---------------------+---------------------+
+```
+(`SURFACED` = erfolgreich aufgetaucht, `CRASHED` = Unfall)
+
+---
+
+### Test 6: 3D-Messpunkte werden gespeichert
+
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SELECT * FROM oceanexplorer.submarine_measurement_point LIMIT 10;"
+```
+
+**Erwartung:**
+```
++----+---------+----+----+-----+
+| id | dive_id |  x |  y |   z |
++----+---------+----+----+-----+
+|  1 |       1 | 50 | 50 | -10 |
+|  2 |       1 | 50 | 50 | -20 |
+...
+```
+
+---
+
+### Test 7: Foto wird gespeichert
+
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SELECT id, dive_id, photo_format, LENGTH(photo_data) AS groesse_bytes, timestamp FROM oceanexplorer.submarine_photo;"
+```
+
+**Erwartung:**
+```
++----+---------+--------------+---------------+---------------------+
+| id | dive_id | photo_format | groesse_bytes | timestamp           |
++----+---------+--------------+---------------+---------------------+
+|  1 |       1 | PNG          |         12345 | 2026-02-24 ...      |
++----+---------+--------------+---------------+---------------------+
 ```
 
 ---
@@ -324,12 +439,16 @@ docker compose up -d
 
 Nach erfolgreichem Test sollten folgende Daten in MySQL sein:
 
-| Tabelle        | Einträge | Beschreibung                |
-|----------------|----------|-----------------------------|
-| sector         | ~10      | Besuchte Sektoren           |
-| ship           | 1        | Explorer-HHMMSS             |
-| ship_position  | ~11      | Start + 10 Bewegungen       |
-| ship_scan      | ~11      | Initial-Scan + 10 Sektoren  |
+| Tabelle                        | Einträge | Beschreibung                      |
+|--------------------------------|----------|-----------------------------------|
+| sector                         | ~10      | Besuchte Sektoren                 |
+| ship                           | 1        | Explorer-HHMMSS                   |
+| ship_position                  | ~11      | Start + 10 Bewegungen             |
+| ship_scan                      | ~11      | Initial-Scan + 10 Sektoren        |
+| submarine                      | 1        | U-Boot (active=0 nach Auftauchen) |
+| submarine_dive                 | 1        | Tauchgang (SURFACED oder CRASHED) |
+| submarine_measurement_point    | >0       | 3D-Messpunkte                     |
+| submarine_photo                | 0 oder 1 | Foto (wenn Submarine eins sendet) |
 
 ---
 
@@ -349,29 +468,75 @@ Nach erfolgreichem Test sollten folgende Daten in MySQL sein:
 10. ✅ Keine Exceptions in der Console
 11. ✅ Daten in DataGrip / IntelliJ DB Plugin sichtbar
 
+✅ **Phase 4 ist erfolgreich, wenn:**
+
+12. ✅ SubmarineServer startet auf Port 9000
+13. ✅ Submarine verbindet sich (`Submarine verbunden von: /127.0.0.1:...`)
+14. ✅ `ready`-Nachricht kommt an → Pilot-Route wird gesendet
+15. ✅ Submarine in `submarine` gespeichert
+16. ✅ Tauchgang in `submarine_dive` gespeichert (Status: `SURFACED` oder `CRASHED`)
+17. ✅ Messpunkte in `submarine_measurement_point` gespeichert
+18. ✅ Foto in `submarine_photo` gespeichert (falls Submarine eins sendet)
+
+---
+
+## 🔧 TROUBLESHOOTING PHASE 4
+
+### Problem: "Submarine konnte nicht gestartet werden"
+
+**Prüfe ob submarine.jar vorhanden:**
+```powershell
+Test-Path "external\submarine.jar"
+```
+Muss `True` zurückgeben.
+
+---
+
+### Problem: Submarine verbindet sich nicht (Port 9000 blockiert)
+
+```powershell
+netstat -ano | findstr ":9000"
+```
+Muss eine Zeile mit `ABHÖREN` zeigen wenn SubmarineServer läuft.
+
+---
+
+### Problem: `submarine_dive` bleibt leer
+
+Der `ready`-Handler in `SubmarineSession` ist zuständig.
+Im Log sollte stehen:
+```
+=== Submarine bereit: #1#Explorer-... ===
+>>> Sende Pilot-Route an ...
+✅ Submarine gespeichert: ...
+✅ Tauchgang gestartet (ID: ...)
+```
+Falls nicht → OceanServer muss Port 8151 für Submarines aktiviert haben (gleiches Start-Klick wie 8150).
+
 ---
 
 ## 📚 NEXT STEPS
 
-Nach erfolgreichem Phase 3 Test:
+Nach erfolgreichem Phase 3 + 4 Test:
 
-→ **Phase 4:** Submarine-Integration
-- SubmarineServer implementieren
-- Submarine-Session-Handling
-- 3D-Messpunkte speichern
-- Bilder speichern
+→ **Phase 5:** Visualisierung / Web-UI
+- HTTP-Server (VisualisationWebservice)
+- Karte der erkundeten Sektoren
+- Tiefen-Heatmap aus scan-Daten
+- Submarine-Pfad-Visualisierung
 
 ---
 
 ## 💡 TIPPS
 
 - **Immer Docker zuerst starten** (20 Sek warten bis `healthy`)
-- **Dann OceanServer** (GUI → Stop → Start)
+- **Dann OceanServer** (GUI → Stop → Start, Port 8150 UND 8151 müssen aktiv sein)
 - **Dann ShipApp** via `.\test-phase3.ps1`
 - **DataGrip / IntelliJ DB Plugin** zum Debuggen
 - **Logs** in Console aufmerksam lesen
 - Bei Problemen: OceanServer Stop → Start
+- Submarine braucht bis zu 60s für einen kompletten Tauchgang
 
 ---
 
-**Viel Erfolg! 🚢**
+**Viel Erfolg! 🚢🤿**
