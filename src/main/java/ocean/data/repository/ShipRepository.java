@@ -48,8 +48,8 @@ public class ShipRepository {
         Vec2D pos = ship.getPosition();
         Vec2D dir = ship.getDirection();
 
-        // INSERT mit RETURNING (SQLite 3.35+)
-        var result = dsl.insertInto(table("ship"))
+        // INSERT + generierte ID lesen (MySQL: LAST_INSERT_ID())
+        dsl.insertInto(table("ship"))
                 .columns(
                         field("name"),
                         field("vehicle_type"),
@@ -60,16 +60,20 @@ public class ShipRepository {
                 )
                 .values(
                         ship.getName(),
-                        VehicleType.ship.name(),  // Alle Schiffe haben Type 'ship'
+                        VehicleType.ship.name(),
                         pos != null ? pos.getX() : null,
                         pos != null ? pos.getY() : null,
                         dir != null ? dir.getX() : null,
                         dir != null ? dir.getY() : null
                 )
-                .returning(field("id"))
-                .fetchOne();
+                .execute();
 
-        long id = result.get(field("id", Long.class));
+        // MySQL: generierte ID über LAST_INSERT_ID() lesen
+        var idRecord = dsl.select(field("LAST_INSERT_ID()", Long.class)).fetchOne();
+        if (idRecord == null || idRecord.value1() == null) {
+            throw new RuntimeException("Schiff konnte nicht gespeichert werden – keine ID erhalten");
+        }
+        long id = idRecord.value1();
         logger.info("✅ Schiff gespeichert: {} (ID: {})", ship.getName(), id);
         return id;
     }

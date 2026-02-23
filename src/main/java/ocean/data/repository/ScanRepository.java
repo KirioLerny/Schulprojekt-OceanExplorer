@@ -162,7 +162,7 @@ public class ScanRepository {
         }
 
         // Erstelle neuen Sektor (mit Standard-Werten)
-        var result = dsl.insertInto(table("sector"))
+        dsl.insertInto(table("sector"))
                 .columns(
                         field("x"),
                         field("y"),
@@ -175,10 +175,14 @@ public class ScanRepository {
                         "WATER",  // Standard: Wasser
                         0
                 )
-                .returning(field("id"))
-                .fetchOne();
+                .execute();
 
-        return result.get(field("id", Long.class));
+        // MySQL: generierte ID über LAST_INSERT_ID() lesen
+        var idRecord = dsl.select(field("LAST_INSERT_ID()", Long.class)).fetchOne();
+        if (idRecord == null || idRecord.value1() == null) {
+            throw new RuntimeException("Sektor konnte nicht angelegt werden – keine ID erhalten");
+        }
+        return idRecord.value1();
     }
 
     /**

@@ -86,15 +86,18 @@ public class OceanClient {
         logger.info("Trenne Verbindung zum OceanServer...");
 
         try {
-            if (connected) {
-                // Exit-Befehl senden
-                sendCommand(CommandFactory.exit());
+            if (connected && out != null) {
+                // Exit-Befehl senden – Server antwortet NICHT, schließt nur die Verbindung
+                String exitCmd = CommandFactory.exit();
+                System.out.println(">>> Sende: " + exitCmd);
+                out.println(exitCmd);
+                out.flush();
             }
             if (in != null) in.close();
             if (out != null) out.close();
             if (socket != null) socket.close();
         } catch (IOException e) {
-            logger.warn("Fehler beim Trennen der Verbindung: {}", e.getMessage());
+            logger.warn("Fehler beim Schließen der Verbindung: {}", e.getMessage());
         } finally {
             connected = false;
         }
@@ -118,20 +121,27 @@ public class OceanClient {
         JSONObject json = new JSONObject(response);
 
         // Server antwortet mit "cmd":"launched" bei Erfolg
+        // Protokoll (2 Nachrichten!):
+        //   1. {"cmd":"launched","id":"...","abspos":{"vec2":[...]}}
+        //   2. {"cmd":"move2d","sector":...,"dir":...}    ← muss auch gelesen werden!
         String cmd = json.optString("cmd", "");
         boolean success = cmd.equals("launched");
 
         if (success) {
             logger.info("Schiff '{}' erfolgreich gestartet bei {}", name, sector);
 
-            // WICHTIG: Server sendet nach "launched" noch eine "move2d" Nachricht
-            // Diese muss gelesen werden, sonst blockiert der Buffer!
-            String move2dResponse = in.readLine();
-            System.out.println("<<< Empfangen: " + move2dResponse);
-            logger.debug("Launch gefolgt von move2d (ignoriert)");
+            // WICHTIG: Server sendet nach "launched" noch eine "move2d" Nachricht.
+            // Diese muss gelesen werden, sonst verrutscht der gesamte Nachrichten-Buffer!
+            String move2dLine = in.readLine();
+            if (move2dLine != null) {
+                System.out.println("<<< Empfangen (move2d): " + move2dLine);
+                logger.debug("Launch-Folgenachricht gelesen: {}", move2dLine);
+            } else {
+                throw new IOException("Verbindung verloren beim Lesen der move2d-Nachricht nach launch");
+            }
         } else {
             String error = json.optString("error", "Unbekannter Fehler");
-            logger.error("Launch fehlgeschlagen: {}", error);
+            logger.error("Launch fehlgeschlagen: {} | Vollständige Antwort: {}", error, response);
         }
 
         return success;
@@ -255,12 +265,17 @@ public class OceanClient {
         out.flush();
 
         String response = in.readLine();
-        System.out.println("<<< Empfangen: " + response);
 
         if (response == null) {
-            throw new IOException("Verbindung zum Server verloren");
+            connected = false;
+            throw new IOException(
+                "OceanServer hat die Verbindung geschlossen!\n" +
+                "  → Wurde in der OceanServer-GUI auf 'Start' geklickt?\n" +
+                "  → Läuft der OceanServer noch?"
+            );
         }
 
+        System.out.println("<<< Empfangen: " + response);
         return response;
     }
 
