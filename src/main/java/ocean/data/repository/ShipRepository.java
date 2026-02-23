@@ -27,11 +27,6 @@ public class ShipRepository {
 
     private final DSLContext dsl;
 
-    /**
-     * Erstellt ein neues ShipRepository.
-     *
-     * @param dbConnection Datenbank-Verbindung
-     */
     public ShipRepository(DatabaseConnection dbConnection) {
         this.dsl = dbConnection.getDSL();
     }
@@ -48,7 +43,7 @@ public class ShipRepository {
         Vec2D pos = ship.getPosition();
         Vec2D dir = ship.getDirection();
 
-        // INSERT + generierte ID lesen (MySQL: LAST_INSERT_ID())
+        // INSERT via jOOQ (kein returning() / getGeneratedKeys() – nicht zuverlässig über exec-maven Classloader)
         dsl.insertInto(table("ship"))
                 .columns(
                         field("name"),
@@ -68,12 +63,16 @@ public class ShipRepository {
                 )
                 .execute();
 
-        // MySQL: generierte ID über LAST_INSERT_ID() lesen
-        var idRecord = dsl.select(field("LAST_INSERT_ID()", Long.class)).fetchOne();
-        if (idRecord == null || idRecord.value1() == null) {
-            throw new RuntimeException("Schiff konnte nicht gespeichert werden – keine ID erhalten");
+        // ID per SELECT by name holen – name ist UNIQUE, daher eindeutig
+        Record idRecord = dsl.select(field("id"))
+                .from(table("ship"))
+                .where(field("name").eq(ship.getName()))
+                .fetchOne();
+
+        if (idRecord == null) {
+            throw new RuntimeException("Schiff konnte nicht gespeichert werden – SELECT nach INSERT lieferte kein Ergebnis");
         }
-        long id = idRecord.value1();
+        long id = idRecord.get(field("id", Long.class));
         logger.info("✅ Schiff gespeichert: {} (ID: {})", ship.getName(), id);
         return id;
     }

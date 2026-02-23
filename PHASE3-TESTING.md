@@ -14,28 +14,27 @@ Phase 3 fügt **MySQL-Datenbank-Persistierung** hinzu:
 
 ### **Schritt 1: MySQL mit Docker starten**
 
-```bash
-cd /Users/kirio/IdeaProjects/OceanExplorer
-docker-compose up -d
+```powershell
+cd C:\Users\DOPAMINKISTE-v2\IdeaProjects\Schulprojekt-OceanExplorer
+docker compose up -d
 ```
 
-⏰ **Warte 15 Sekunden** bis MySQL initialisiert ist.
+⏰ **Warte 20 Sekunden** bis MySQL initialisiert ist.
 
 Prüfe ob Container laufen:
-```bash
+```powershell
 docker ps
 ```
 
 Sollte zeigen:
-- `oceanexplorer-mysql` (Port 3306)
-- `oceanexplorer-phpmyadmin` (Port 8080)
+- `oceanexplorer-mysql` (Port 3306) mit Status `healthy`
 
 ---
 
 ### **Schritt 2: OceanServer starten**
 
-```bash
-cd /Users/kirio/IdeaProjects/OceanExplorer/external
+```powershell
+cd external
 java -jar oceanserver.jar
 ```
 
@@ -46,137 +45,117 @@ java -jar oceanserver.jar
 
 ### **Schritt 3: Phase 3 Test ausführen**
 
-**Terminal 3 (neues Terminal):**
-
-```bash
-cd /Users/kirio/IdeaProjects/OceanExplorer
-./test-phase3.sh
+```powershell
+.\test-phase3.ps1
 ```
 
 **ODER mit Maven direkt:**
 
-```bash
-mvn exec:java -Dexec.mainClass="ocean.Main"
+```powershell
+mvn exec:java "-Dexec.mainClass=ocean.Main"
 ```
 
 ---
 
 ## ✅ ERWARTETE AUSGABE
 
-### Console Output:
-
 ```
 [INFO] === Ocean Explorer - ShipApp gestartet ===
-[INFO] Verbinde zu OceanServer:
-[INFO]   - Ship Port: 8150
-[INFO]   - Submarine Port: 8151
-
 [INFO] === Phase 3: Initialisiere Datenbank ===
-[INFO] Verbinde zu MySQL-Datenbank:
-[INFO]   Host: localhost:3306
-[INFO]   Datenbank: oceanexplorer
-[INFO]   Benutzer: oceanapp
 [INFO] ✅ Datenbank verbunden (Connection Pool aktiv)
 [INFO] ✅ Datenbank-Verbindung erfolgreich getestet
+[INFO] ✅ Datenbank bereit
 
-[INFO] Verbinde mit OceanServer localhost:8150
-[DEBUG] Verbinde mit OceanServer localhost:8150
-[DEBUG] Verbindung hergestellt!
-[INFO] Verbunden mit OceanServer: localhost:8150
+[INFO] Schiff gestartet: Ship[Explorer-220556 at (50,50) dir=(0,1)]
+[INFO] ✅ Schiff gespeichert: Explorer-220556 (ID: 1)
 
-[INFO] Starte Schiff: Explorer-1 at (50,50) dir=(0,1)
->>> Sende: {"cmd":"launch","name":"Explorer-1","type":"ship","sector":{"x":50,"y":50},"dir":{"x":0,"y":1}}
-<<< Empfangen: {"cmd":"launched","name":"Explorer-1","type":"ship","sector":{"x":50,"y":50},"dir":{"x":0,"y":1}}
-<<< Empfangen: {"cmd":"move2d","sector":{"x":50,"y":50},"dir":{"x":0,"y":1}}
-[INFO] Schiff gestartet: Ship[name=Explorer-1, position=(50,50), direction=(0,1)]
-[INFO] ✅ Schiff gespeichert: Explorer-1 (ID: 1)
-
-[INFO] === Phase 1: Teste Radar & Scan ===
-[INFO] Führe Radar-Scan durch...
->>> Sende: {"cmd":"radar"}
-<<< Empfangen: {"cmd":"radarresponse","echos":[...]}
-[INFO] Radar-Scan ergab 8 Sektoren
-[DEBUG] Radar: 8 Sektoren gescannt
-
-[INFO] Führe Tiefen-Scan durch...
->>> Sende: {"cmd":"scan"}
-<<< Empfangen: {"cmd":"scanned","depth":-2500,"stddev":123.45}
-[INFO] Tiefen-Scan: depth=-2500, stdDev=123.45
-
-[INFO] === Phase 2: Autonome Navigation ===
-[INFO] Starte autonome Navigation
-[INFO] Ziel: 10 Sektoren erkunden
-
-[INFO] Bewegung 1: FORWARD/CENTER
->>> Sende: {"cmd":"navigate","rudder":"Center","course":"Forward"}
-<<< Empfangen: {"cmd":"move2d","sector":{"x":50,"y":51},"dir":{"x":0,"y":1}}
-[DEBUG] Schiff bewegt zu (50,51) mit Richtung (0,1)
-[INFO] Position aktualisiert: Explorer-1 -> (50,51)
-
-[INFO] Scanne Sektor (50,51)...
->>> Sende: {"cmd":"scan"}
-<<< Empfangen: {"cmd":"scanned","depth":-2498,"stddev":118.32}
-[INFO]   → Tiefe: -2498.0 m, StdDev: 118.32
-[INFO] Fortschritt: 2/10 Sektoren gescannt
-
-...
-
-[INFO] === Test erfolgreich abgeschlossen! ===
-[INFO] Gespeichert:
-[INFO]   - 1 Schiff
-[INFO]   - 10 Positionen
-[INFO]   - 10 Scans
+[INFO] === Phase 1 Test erfolgreich! ===
+[INFO] === Phase 2: Starte autonome Navigation ===
+[INFO] Fortschritt: 10/10 Sektoren gescannt
+[INFO] === Phase 2 Test erfolgreich! ===
+[INFO] === Phase 3: Datenbank-Statistiken ===
+[INFO] Gespeicherte Scans: 11
+[INFO] Gespeicherte Positionen: 11
+[INFO] === Phase 3 Test erfolgreich! ===
 ```
 
 ---
 
 ## 📊 DATENBANK PRÜFEN
 
-### Option 1: PHPMyAdmin (GUI)
+### DataGrip / IntelliJ DB Plugin
 
-```bash
-open http://localhost:8080
-```
-
-**Login:**
-- Server: `db`
+**Verbindung:**
+- Host: `localhost`
+- Port: `3306`
 - Benutzer: `root`
-- Passwort: `oceanexplorer`
+- Passwort: `oceanexplorer_root`
+- Datenbank: `oceanexplorer`
 
-**Datenbank:** `oceanexplorer`
+**Oder als App-User:**
+- Benutzer: `oceanapp`
+- Passwort: `oceanpass123`
 
-**Tabellen prüfen:**
+---
+
+### Nützliche SQL-Abfragen
+
 ```sql
 -- Alle Schiffe
-SELECT * FROM Ship;
+SELECT * FROM ship;
 
--- Alle Positionen
-SELECT * FROM ShipPosition ORDER BY timestamp DESC;
+-- Alle Positionen (neueste zuerst)
+SELECT * FROM ship_position ORDER BY timestamp DESC;
 
--- Alle Scans
-SELECT * FROM ShipScan ORDER BY timestamp DESC;
+-- Alle Scans (neueste zuerst)
+SELECT * FROM ship_scan ORDER BY timestamp DESC;
 
--- Letzte Position
-SELECT s.name, sp.x, sp.y, sp.dir_x, sp.dir_y, sp.timestamp
-FROM Ship s
-JOIN ShipPosition sp ON s.id = sp.ship_id
+-- Letzte Position mit Schiffsname
+SELECT s.name, sp.x, sp.y, sp.direction_x, sp.direction_y, sp.timestamp
+FROM ship s
+JOIN ship_position sp ON s.id = sp.ship_id
 ORDER BY sp.timestamp DESC
 LIMIT 1;
+
+-- Scans mit Sektorinfo
+SELECT s.name, sc.x, sc.y, sc.average_depth, sc.std_deviation, sc.timestamp
+FROM ship s
+JOIN ship_scan sc ON s.id = sc.ship_id
+ORDER BY sc.timestamp DESC;
+
+-- Übersicht: Alle Tabellen mit Zeilenanzahl
+SELECT table_name, table_rows
+FROM information_schema.tables
+WHERE table_schema = 'oceanexplorer'
+ORDER BY table_name;
+
+-- Alles löschen (Daten, nicht Struktur)
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE submarine_measurement_point;
+TRUNCATE TABLE submarine_dive;
+TRUNCATE TABLE submarine;
+TRUNCATE TABLE ship_scan;
+TRUNCATE TABLE ship_position;
+TRUNCATE TABLE ship;
+TRUNCATE TABLE sector;
+TRUNCATE TABLE ocean;
+SET FOREIGN_KEY_CHECKS = 1;
 ```
 
 ---
 
-### Option 2: MySQL CLI
+### MySQL CLI (PowerShell)
 
-```bash
-docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer oceanexplorer
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root oceanexplorer
 ```
 
 ```sql
 SHOW TABLES;
-SELECT * FROM Ship;
-SELECT * FROM ShipPosition;
-SELECT * FROM ShipScan;
+SELECT * FROM ship;
+SELECT * FROM ship_position;
+SELECT * FROM ship_scan;
+SELECT * FROM sector;
 ```
 
 ---
@@ -185,36 +164,35 @@ SELECT * FROM ShipScan;
 
 ### Test 1: Schiff wird gespeichert
 
-```bash
-# Prüfe nach Start der App
-docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer -e "SELECT * FROM oceanexplorer.Ship;"
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SELECT id, name, vehicle_type, current_x, current_y, launched_at FROM oceanexplorer.ship;"
 ```
 
 **Erwartung:**
 ```
-+----+------------+--------------+---------------------+
-| id | name       | vehicle_type | launched_at         |
-+----+------------+--------------+---------------------+
-|  1 | Explorer-1 | ship         | 2026-02-20 15:30:00 |
-+----+------------+--------------+---------------------+
++----+------------------+--------------+-----------+-----------+---------------------+
+| id | name             | vehicle_type | current_x | current_y | launched_at         |
++----+------------------+--------------+-----------+-----------+---------------------+
+|  1 | Explorer-220556  | ship         |        50 |        59 | 2026-02-23 22:05:56 |
++----+------------------+--------------+-----------+-----------+---------------------+
 ```
 
 ---
 
 ### Test 2: Positionen werden gespeichert
 
-```bash
-docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer -e "SELECT ship_id, x, y, dir_x, dir_y FROM oceanexplorer.ShipPosition ORDER BY timestamp;"
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SELECT ship_id, x, y, direction_x, direction_y, timestamp FROM oceanexplorer.ship_position ORDER BY timestamp;"
 ```
 
 **Erwartung:**
 ```
-+---------+----+----+-------+-------+
-| ship_id | x  | y  | dir_x | dir_y |
-+---------+----+----+-------+-------+
-|       1 | 50 | 50 |     0 |     1 |
-|       1 | 50 | 51 |     0 |     1 |
-|       1 | 50 | 52 |     0 |     1 |
++---------+----+----+-------------+-------------+---------------------+
+| ship_id |  x |  y | direction_x | direction_y | timestamp           |
++---------+----+----+-------------+-------------+---------------------+
+|       1 | 50 | 50 |           0 |           1 | 2026-02-23 22:05:56 |
+|       1 | 50 | 51 |           0 |           1 | 2026-02-23 22:05:57 |
+|       1 | 50 | 52 |           0 |           1 | 2026-02-23 22:05:57 |
 ...
 ```
 
@@ -222,17 +200,17 @@ docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer -e "SELECT shi
 
 ### Test 3: Scans werden gespeichert
 
-```bash
-docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer -e "SELECT ship_id, sector_id, depth, std_dev FROM oceanexplorer.ShipScan;"
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SELECT ship_id, sector_id, x, y, average_depth, std_deviation FROM oceanexplorer.ship_scan;"
 ```
 
 **Erwartung:**
 ```
-+---------+-----------+-------+---------+
-| ship_id | sector_id | depth | std_dev |
-+---------+-----------+-------+---------+
-|       1 |         1 | -2500 |  123.45 |
-|       1 |         2 | -2498 |  118.32 |
++---------+-----------+----+----+---------------+---------------+
+| ship_id | sector_id |  x |  y | average_depth | std_deviation |
++---------+-----------+----+----+---------------+---------------+
+|       1 |         1 | 50 | 50 |           -53 |     2.9409692 |
+|       1 |         2 | 50 | 51 |           -40 |     4.9972790 |
 ...
 ```
 
@@ -242,22 +220,17 @@ docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer -e "SELECT shi
 
 ### Problem: Docker Container startet nicht
 
-**Prüfe Docker:**
-```bash
+```powershell
 docker ps
-docker-compose ps
-```
-
-**Logs anschauen:**
-```bash
-docker-compose logs mysql
+docker compose ps
+docker compose logs mysql
 ```
 
 **Neustart:**
-```bash
-docker-compose down
-docker-compose up -d
-sleep 15
+```powershell
+docker compose down
+docker compose up -d
+Start-Sleep 20
 ```
 
 ---
@@ -269,88 +242,80 @@ sleep 15
 java.sql.SQLNonTransientConnectionException: Public Key Retrieval is not allowed
 ```
 
-**Lösung:**
-Ist bereits in `DatabaseConnection.java` konfiguriert mit:
+**Lösung:** Bereits konfiguriert in `DatabaseConnection.java`:
 ```
 allowPublicKeyRetrieval=true&useSSL=false
-```
-
-Falls Problem besteht, prüfe `pom.xml`:
-```xml
-<dependency>
-    <groupId>mysql</groupId>
-    <artifactId>mysql-connector-java</artifactId>
-    <version>8.0.33</version>
-</dependency>
 ```
 
 ---
 
 ### Problem: Tabellen existieren nicht
 
-**Prüfe ob Schema initialisiert wurde:**
-```bash
-docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer -e "SHOW TABLES FROM oceanexplorer;"
+```powershell
+docker exec -it oceanexplorer-mysql mysql -u root -poceanexplorer_root -e "SHOW TABLES FROM oceanexplorer;"
 ```
 
 **Falls leer, manuell initialisieren:**
-```bash
-docker exec -i oceanexplorer-mysql mysql -u root -poceanexplorer oceanexplorer < docker/init.sql
+```powershell
+Get-Content docker\init.sql | docker exec -i oceanexplorer-mysql mysql -u root -poceanexplorer_root oceanexplorer
 ```
 
 ---
 
 ### Problem: OceanServer antwortet nicht
 
-**Symptom:**
+**Symptom:** App hängt 30 Sekunden, dann:
 ```
-java.net.ConnectException: Connection refused (Connection refused)
+OceanServer hat nach 30 Sekunden NICHT geantwortet!
+→ Schiff-Name bereits vergeben? Bitte OceanServer neu starten.
 ```
 
 **Lösung:**
 1. OceanServer GUI geöffnet?
-2. **"Start"** Button geklickt?
-3. Console zeigt "Waiting on Port 8150"?
+2. **"Stop"** dann **"Start"** klicken
+3. Console muss zeigen: "Waiting on Port 8150"
 
-**Port prüfen:**
-```bash
-lsof -i :8150
+**Port prüfen (PowerShell):**
+```powershell
+netstat -ano | findstr ":8150"
 ```
 
 ---
 
 ### Problem: ShipApp verbindet sich nicht
 
-**Prüfe ob OceanServer tatsächlich lauscht:**
-```bash
-nc -zv localhost 8150
+```powershell
+# TCP-Verbindung testen
+(New-Object System.Net.Sockets.TcpClient).Connect("localhost", 8150)
 ```
-
-**Sollte zeigen:**
-```
-Connection to localhost port 8150 [tcp/*] succeeded!
-```
-
-**Falls nicht:** OceanServer neu starten und auf "Start" klicken warten.
 
 ---
 
 ## 🧹 CLEANUP
 
 ### Container stoppen:
-```bash
-docker-compose down
+```powershell
+docker compose down
 ```
 
-### Datenbank zurücksetzen:
-```bash
-docker-compose down -v  # Löscht auch Volumes (Datenbank-Daten)
-docker-compose up -d
+### Datenbank-Daten löschen (Struktur bleibt):
+```sql
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE submarine_measurement_point;
+TRUNCATE TABLE submarine_dive;
+TRUNCATE TABLE submarine;
+TRUNCATE TABLE ship_scan;
+TRUNCATE TABLE ship_position;
+TRUNCATE TABLE ship;
+TRUNCATE TABLE sector;
+TRUNCATE TABLE ocean;
+SET FOREIGN_KEY_CHECKS = 1;
 ```
 
-### Alle Docker-Ressourcen löschen:
-```bash
-docker-compose down -v --remove-orphans
+### Datenbank komplett zurücksetzen (inkl. Volumes):
+```powershell
+docker compose down -v
+docker compose up -d
 ```
 
 ---
@@ -359,13 +324,12 @@ docker-compose down -v --remove-orphans
 
 Nach erfolgreichem Test sollten folgende Daten in MySQL sein:
 
-| Tabelle         | Einträge | Beschreibung                    |
-|-----------------|----------|---------------------------------|
-| Ocean           | 1        | Ozean-Metadaten (Singleton)     |
-| Sector          | ~10      | Besuchte Sektoren               |
-| Ship            | 1        | Explorer-1                      |
-| ShipPosition    | ~11      | Start + 10 Bewegungen           |
-| ShipScan        | ~10      | Tiefen-Messungen                |
+| Tabelle        | Einträge | Beschreibung                |
+|----------------|----------|-----------------------------|
+| sector         | ~10      | Besuchte Sektoren           |
+| ship           | 1        | Explorer-HHMMSS             |
+| ship_position  | ~11      | Start + 10 Bewegungen       |
+| ship_scan      | ~11      | Initial-Scan + 10 Sektoren  |
 
 ---
 
@@ -373,16 +337,17 @@ Nach erfolgreichem Test sollten folgende Daten in MySQL sein:
 
 ✅ **Phase 3 ist erfolgreich, wenn:**
 
-1. ✅ Docker Container starten ohne Fehler
+1. ✅ Docker Container startet ohne Fehler (`healthy`)
 2. ✅ MySQL erreichbar auf Port 3306
-3. ✅ ShipApp verbindet sich mit OceanServer
-4. ✅ ShipApp verbindet sich mit MySQL
-5. ✅ Tabellen werden automatisch erstellt
-6. ✅ Schiff wird in DB gespeichert
-7. ✅ Positionen werden aufgezeichnet
-8. ✅ Scans werden gespeichert
-9. ✅ Keine SQL-Fehler in Console
-10. ✅ Daten in PHPMyAdmin sichtbar
+3. ✅ OceanServer antwortet auf Kommandos
+4. ✅ ShipApp verbindet sich mit OceanServer
+5. ✅ ShipApp verbindet sich mit MySQL
+6. ✅ Schiff wird in `ship` gespeichert
+7. ✅ Positionen werden in `ship_position` aufgezeichnet
+8. ✅ Scans werden in `ship_scan` gespeichert
+9. ✅ Sektoren werden in `sector` angelegt
+10. ✅ Keine Exceptions in der Console
+11. ✅ Daten in DataGrip / IntelliJ DB Plugin sichtbar
 
 ---
 
@@ -400,14 +365,13 @@ Nach erfolgreichem Phase 3 Test:
 
 ## 💡 TIPPS
 
-- **Immer Docker zuerst starten** (15 Sek warten)
-- **Dann OceanServer** (GUI Start klicken)
-- **Dann ShipApp**
-- **PHPMyAdmin** super zum Debuggen
+- **Immer Docker zuerst starten** (20 Sek warten bis `healthy`)
+- **Dann OceanServer** (GUI → Stop → Start)
+- **Dann ShipApp** via `.\test-phase3.ps1`
+- **DataGrip / IntelliJ DB Plugin** zum Debuggen
 - **Logs** in Console aufmerksam lesen
-- Bei Problemen: Container neu starten
+- Bei Problemen: OceanServer Stop → Start
 
 ---
 
 **Viel Erfolg! 🚢**
-

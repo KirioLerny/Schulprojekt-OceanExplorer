@@ -8,6 +8,7 @@ import org.jooq.Record;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,11 +27,6 @@ public class ScanRepository {
 
     private final DSLContext dsl;
 
-    /**
-     * Erstellt ein neues ScanRepository.
-     *
-     * @param dbConnection Datenbank-Verbindung
-     */
     public ScanRepository(DatabaseConnection dbConnection) {
         this.dsl = dbConnection.getDSL();
     }
@@ -161,41 +157,37 @@ public class ScanRepository {
             return existing.get(field("id", Long.class));
         }
 
-        // Erstelle neuen Sektor (mit Standard-Werten)
+        // INSERT via jOOQ (kein returning() – nicht zuverlässig mit MySQL über exec-maven)
         dsl.insertInto(table("sector"))
-                .columns(
-                        field("x"),
-                        field("y"),
-                        field("ground_type"),
-                        field("height")
-                )
-                .values(
-                        position.getX(),
-                        position.getY(),
-                        "WATER",  // Standard: Wasser
-                        0
-                )
+                .columns(field("x"), field("y"), field("ground_type"), field("height"))
+                .values(position.getX(), position.getY(), "WATER", 0)
                 .execute();
 
-        // MySQL: generierte ID über LAST_INSERT_ID() lesen
-        var idRecord = dsl.select(field("LAST_INSERT_ID()", Long.class)).fetchOne();
-        if (idRecord == null || idRecord.value1() == null) {
-            throw new RuntimeException("Sektor konnte nicht angelegt werden – keine ID erhalten");
+        // ID per separatem SELECT holen – zuverlässigste Methode mit MySQL
+        Record idRecord = dsl.select(field("id"))
+                .from(table("sector"))
+                .where(field("x").eq(position.getX()))
+                .and(field("y").eq(position.getY()))
+                .fetchOne();
+
+        if (idRecord == null) {
+            throw new RuntimeException("Sektor konnte nicht angelegt werden – SELECT nach INSERT lieferte kein Ergebnis");
         }
-        return idRecord.value1();
+        return idRecord.get(field("id", Long.class));
     }
 
     /**
      * Mappt Record zu ScanData.
      */
     private ScanData mapToScanData(Record record) {
+        Timestamp ts = record.get(field("timestamp", Timestamp.class));
         return new ScanData(
                 record.get(field("id", Long.class)),
                 record.get(field("x", Integer.class)),
                 record.get(field("y", Integer.class)),
                 record.get(field("average_depth", Double.class)),
                 record.get(field("std_deviation", Double.class)),
-                record.get(field("timestamp", String.class))
+                ts != null ? ts.toString() : null
         );
     }
 
@@ -203,13 +195,14 @@ public class ScanRepository {
      * Mappt Record zu PositionData.
      */
     private PositionData mapToPositionData(Record record) {
+        Timestamp ts = record.get(field("timestamp", Timestamp.class));
         return new PositionData(
                 record.get(field("id", Long.class)),
                 record.get(field("x", Integer.class)),
                 record.get(field("y", Integer.class)),
                 record.get(field("direction_x", Integer.class)),
                 record.get(field("direction_y", Integer.class)),
-                record.get(field("timestamp", String.class))
+                ts != null ? ts.toString() : null
         );
     }
 

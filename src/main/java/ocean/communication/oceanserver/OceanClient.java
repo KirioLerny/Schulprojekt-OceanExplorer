@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,6 +72,7 @@ public class OceanClient {
         System.out.println("[DEBUG] Verbinde mit OceanServer " + host + ":" + port);
 
         socket = new Socket(host, port);
+        socket.setSoTimeout(30_000); // 30 Sekunden Lese-Timeout – verhindert endloses Hängen
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         connected = true;
@@ -264,7 +266,17 @@ public class OceanClient {
         out.println(command);
         out.flush();
 
-        String response = in.readLine();
+        String response;
+        try {
+            response = in.readLine();
+        } catch (SocketTimeoutException e) {
+            connected = false;
+            throw new IOException(
+                "OceanServer hat nach 30 Sekunden NICHT geantwortet!\n" +
+                "  → Schiff-Name bereits vergeben? Bitte OceanServer neu starten.\n" +
+                "  → Läuft der OceanServer noch?"
+            );
+        }
 
         if (response == null) {
             connected = false;

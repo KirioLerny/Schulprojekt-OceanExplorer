@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -89,7 +91,9 @@ public class Main {
             client.connect();
 
             // 2. Schiff erstellen und starten
-            Ship ship = new Ship("Explorer-1");
+            // Eindeutiger Name pro Run → kein Namenskonflikt auf dem OceanServer
+            String timestamp = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+            Ship ship = new Ship("Explorer-" + timestamp);
             Vec2D startPosition = new Vec2D(50, 50);  // Mitte des Ozeans
             Vec2D startDirection = new Vec2D(0, 1);   // Richtung Nord
 
