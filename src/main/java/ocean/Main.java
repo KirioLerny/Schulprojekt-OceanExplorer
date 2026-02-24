@@ -152,16 +152,19 @@ public class Main {
 
             SubmarineRepository subRepo = new SubmarineRepository(db);
 
-            // SubmarineServer starten (wartet auf Port 9000)
+            // 3 Submarines – Server akzeptiert genau diese Anzahl
+            final int NUM_SUBMARINES = 3;
+
+            // SubmarineServer starten – akzeptiert genau NUM_SUBMARINES Verbindungen
             SubmarineServer subServer = new SubmarineServer(
-                    SubmarineServer.DEFAULT_PORT, subRepo, shipId);
+                    SubmarineServer.DEFAULT_PORT, subRepo, shipId, NUM_SUBMARINES);
             subServer.start();
-            logger.info("SubmarineServer lauscht auf Port {}", SubmarineServer.DEFAULT_PORT);
+            logger.info("SubmarineServer lauscht auf Port {} (max. {} Submarines)",
+                    SubmarineServer.DEFAULT_PORT, NUM_SUBMARINES);
 
             // Kurz warten bis ServerSocket bereit ist
             try { Thread.sleep(500); } catch (InterruptedException ignored) {}
 
-            // Submarine via AppLauncher starten
             // Die echte Ship-ID wie der OceanServer sie vergeben hat (z.B. "#1#Explorer-220556")
             String oceanShipId = client.getShipServerId();
             if (oceanShipId == null) {
@@ -169,23 +172,38 @@ public class Main {
                 subServer.shutdown();
                 return;
             }
-            logger.info("Starte Submarine für Schiff: {}", oceanShipId);
 
-            boolean subStarted = AppLauncher.startSubmarine(
-                    "external",
-                    oceanShipId,
-                    "localhost",
-                    SubmarineServer.DEFAULT_PORT,
-                    OCEAN_SERVER_HOST,
-                    OCEAN_SERVER_SUBMARINE_PORT
-            );
+            logger.info("Starte {} Submarines für Schiff: {}", NUM_SUBMARINES, oceanShipId);
 
-            if (subStarted) {
-                logger.info("✅ Submarine gestartet – warte auf Tauchgang (max. 60s)...");
-                try { Thread.sleep(60_000); } catch (InterruptedException ignored) {}
-            } else {
-                logger.warn("Submarine konnte nicht gestartet werden (submarine.jar in external/ vorhanden?)");
+            int startedCount = 0;
+            for (int i = 0; i < NUM_SUBMARINES; i++) {
+                // Pause zwischen den Starts damit OceanServer + Submarine JVMs nicht gleichzeitig hochlaufen
+                if (i > 0) {
+                    try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                }
+                boolean subStarted = AppLauncher.startSubmarine(
+                        "external",
+                        oceanShipId,
+                        "localhost",
+                        SubmarineServer.DEFAULT_PORT,
+                        OCEAN_SERVER_HOST,
+                        OCEAN_SERVER_SUBMARINE_PORT
+                );
+                if (subStarted) {
+                    startedCount++;
+                    logger.info("✅ Submarine {} von {} gestartet", startedCount, NUM_SUBMARINES);
+                } else {
+                    logger.warn("⚠️ Submarine {} konnte nicht gestartet werden", i + 1);
+                }
             }
+
+            logger.info("✅ {} Submarines gestartet – warte auf alle Tauchgänge (max. 120s)...", startedCount);
+
+            try {
+                subServer.waitForAllSessions(120_000);
+                // Kurzer Puffer damit letzte DB-Schreibvorgänge abgeschlossen werden
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {}
 
             subServer.shutdown();
             logger.info("=== Phase 4 abgeschlossen ===");

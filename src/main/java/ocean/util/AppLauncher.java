@@ -24,9 +24,7 @@ public class AppLauncher {
 		}
 		ArrayList<String> cmd = new ArrayList<>();
 		String javaExecutablePath = ProcessHandle.current().info().command().orElseThrow();
-		System.out.println("javaExecutablePath:"+javaExecutablePath);
-		System.out.println(submarine);
-		cmd.add(javaExecutablePath); 
+		cmd.add(javaExecutablePath);
 		cmd.add("--add-exports");
 		cmd.add("java.desktop/sun.awt=ALL-UNNAMED");
 		cmd.add("-jar");
@@ -38,7 +36,9 @@ public class AppLauncher {
 		cmd.add("-oceanport=" + oceanSrvPort);
 
 		ProcessBuilder pb = new ProcessBuilder(cmd);
-		pb.inheritIO();
+		// Submarine-Output verwerfen – verhindert I/O-Last und Ausgabe-Chaos bei parallelen Starts
+		pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+		pb.redirectError(ProcessBuilder.Redirect.DISCARD);
 		try {
 			Process p = pb.start();
 			boolean rc = p.waitFor(1000, TimeUnit.MILLISECONDS);

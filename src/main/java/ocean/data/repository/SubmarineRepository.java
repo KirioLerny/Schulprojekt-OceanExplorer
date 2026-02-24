@@ -146,11 +146,12 @@ public class SubmarineRepository {
      * @param z         Z-Koordinate (Tiefe, negativ)
      */
     public void saveMeasurementPoint(long diveId, int x, int y, int z) {
-        dsl.insertInto(table("submarine_measurement_point"))
-                .columns(field("dive_id"), field("x"), field("y"), field("z"))
-                .values(diveId, x, y, z)
-                .execute();
-        logger.debug("Messpunkt gespeichert: ({},{},{})", x, y, z);
+        // INSERT IGNORE: Jeder Punkt nur einmal speichern (UNIQUE x,y,z laut context.md)
+        dsl.execute(
+            "INSERT IGNORE INTO submarine_measurement_point (dive_id, x, y, z) VALUES (?, ?, ?, ?)",
+            diveId, x, y, z
+        );
+        logger.debug("Messpunkt gespeichert (oder bereits vorhanden): ({},{},{})", x, y, z);
     }
 
     /**
@@ -171,17 +172,29 @@ public class SubmarineRepository {
     // =========================================================
 
     /**
-     * Speichert ein PNG-Foto als BLOB.
+     * Speichert ein PNG-Foto als BLOB inkl. Position und Richtung des Submarines.
      *
      * @param diveId    DB-ID des Tauchgangs
      * @param photoData Foto-Daten als Byte-Array
+     * @param x         X-Position
+     * @param y         Y-Position
+     * @param z         Z-Position (Tiefe)
+     * @param dirX      Richtung X
+     * @param dirY      Richtung Y
+     * @param dirZ      Richtung Z
      */
-    public void savePhoto(long diveId, byte[] photoData) {
-        logger.debug("Speichere Foto ({} Bytes) für Tauchgang {}", photoData.length, diveId);
+    public void savePhoto(long diveId, byte[] photoData, int x, int y, int z, int dirX, int dirY, int dirZ) {
+        logger.debug("Speichere Foto ({} Bytes) für Tauchgang {} pos=({},{},{})", photoData.length, diveId, x, y, z);
 
         dsl.insertInto(table("submarine_photo"))
-                .columns(field("dive_id"), field("photo_data"), field("photo_format"))
-                .values(diveId, photoData, "PNG")
+                .columns(
+                        field("dive_id"),
+                        field("photo_data"),
+                        field("photo_format"),
+                        field("x"), field("y"), field("z"),
+                        field("dir_x"), field("dir_y"), field("dir_z")
+                )
+                .values(diveId, photoData, "PNG", x, y, z, dirX, dirY, dirZ)
                 .execute();
 
         logger.info("✅ Foto gespeichert ({} Bytes)", photoData.length);

@@ -110,8 +110,36 @@ public class DatabaseConnection {
             // Verbindung testen
             testConnection();
 
+            // Schema-Migration: fehlende Spalten nachrüsten
+            migrateSchema();
+
         } catch (Exception e) {
             throw new SQLException("Fehler beim Verbinden zur Datenbank", e);
+        }
+    }
+
+    /**
+     * Führt Schema-Migrationen durch.
+     * Fügt fehlende Spalten hinzu ohne bestehende Daten zu löschen.
+     * MySQL unterstützt kein "ADD COLUMN IF NOT EXISTS" direkt – wir prüfen vorher.
+     */
+    private void migrateSchema() {
+        try (Connection conn = dataSource.getConnection()) {
+            // submarine_photo: Positions-/Richtungsspalten nachrüsten
+            String[] photoColumns = {"x", "y", "z", "dir_x", "dir_y", "dir_z"};
+            for (String col : photoColumns) {
+                try (var rs = conn.getMetaData().getColumns(null, null, "submarine_photo", col)) {
+                    if (!rs.next()) {
+                        String sql = "ALTER TABLE submarine_photo ADD COLUMN " + col + " INT";
+                        try (var stmt = conn.createStatement()) {
+                            stmt.execute(sql);
+                            logger.info("✅ Schema-Migration: submarine_photo.{} hinzugefügt", col);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Schema-Migration fehlgeschlagen (ignoriert): {}", e.getMessage());
         }
     }
 

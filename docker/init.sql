@@ -128,6 +128,12 @@ CREATE TABLE IF NOT EXISTS submarine_photo (
     dive_id BIGINT NOT NULL,
     photo_data LONGBLOB NOT NULL,
     photo_format VARCHAR(10) DEFAULT 'PNG',
+    x INT,
+    y INT,
+    z INT,
+    dir_x INT,
+    dir_y INT,
+    dir_z INT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_dive (dive_id),
     FOREIGN KEY (dive_id) REFERENCES submarine_dive(id) ON DELETE CASCADE

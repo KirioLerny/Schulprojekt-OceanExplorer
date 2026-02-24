@@ -103,6 +103,12 @@ CREATE TABLE IF NOT EXISTS submarine_photo (
     dive_id INTEGER NOT NULL,
     photo_data BLOB NOT NULL,
     photo_format TEXT DEFAULT 'PNG',
+    x INTEGER,
+    y INTEGER,
+    z INTEGER,
+    dir_x INTEGER,
+    dir_y INTEGER,
+    dir_z INTEGER,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (dive_id) REFERENCES submarine_dive(id)
 );
