@@ -1,6 +1,7 @@
 package ocean.logic.navigation;
 
 import ocean.communication.oceanserver.OceanClient;
+import ocean.communication.submarine.SubmarineServer;
 import ocean.data.repository.ScanRepository;
 import ocean.data.repository.ShipRepository;
 import ocean.model.*;
@@ -52,6 +53,12 @@ public class NavigationController {
     private final ScanRepository scanRepository;
 
     /**
+     * Optional: läuft ein SubmarineServer, wird vor jedem Sektorwechsel geprüft.
+     * Solange Submarines tauchen darf das Schiff den Sektor NICHT wechseln (context.md Regel 2).
+     */
+    private SubmarineServer submarineServer;
+
+    /**
      * Erstellt einen neuen NavigationController.
      *
      * @param client OceanClient für Server-Kommunikation
@@ -85,6 +92,14 @@ public class NavigationController {
                 logger.warn("Schiff {} nicht in Datenbank gefunden", ship.getName());
             }
         }
+    }
+
+    /**
+     * Registriert den SubmarineServer.
+     * Wenn gesetzt, blockiert navigate() solange Submarines aktiv tauchen.
+     */
+    public void setSubmarineServer(SubmarineServer submarineServer) {
+        this.submarineServer = submarineServer;
     }
 
     /**
@@ -163,12 +178,26 @@ public class NavigationController {
     /**
      * Bewegt das Schiff zum nächsten Sektor.
      *
+     * Prüft zunächst ob Submarines tauchen – falls ja, wird gewartet (context.md Regel 2).
      * Nutzt Radar zur Kollisionsvermeidung und wählt eine sichere Richtung.
      *
      * @return true wenn Bewegung erfolgreich
      * @throws IOException bei Kommunikationsfehlern
      */
     private boolean moveToNextSector() throws IOException {
+        // === context.md Regel 2: Schiff darf Sektor nicht wechseln während Submarine taucht ===
+        if (submarineServer != null && submarineServer.isDiving()) {
+            logger.info("⚓ Navigation blockiert – {} Submarine(s) aktiv – warte...",
+                    submarineServer.getActiveSessionCount());
+            while (submarineServer.isDiving()) {
+                try { Thread.sleep(500); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+            logger.info("✅ Alle Submarines aufgetaucht – Navigation freigegeben");
+        }
+
         logger.debug("Führe Radar-Scan durch...");
         List<RadarEcho> radarData = client.radar();
 

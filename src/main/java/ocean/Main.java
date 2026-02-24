@@ -1,7 +1,9 @@
 package ocean;
+import ocean.api.PhotoApiServer;
 import ocean.communication.oceanserver.OceanClient;
 import ocean.communication.submarine.SubmarineServer;
 import ocean.data.DatabaseConnection;
+import ocean.data.repository.PhotoRepository;
 import ocean.data.repository.ScanRepository;
 import ocean.data.repository.ShipRepository;
 import ocean.data.repository.SubmarineRepository;
@@ -64,6 +66,7 @@ public class Main {
         DatabaseConnection db = null;
         ShipRepository shipRepo = null;
         ScanRepository scanRepo = null;
+        PhotoApiServer photoApi = null;
 
         try {
             // === PHASE 3: DATENBANK INITIALISIEREN ===
@@ -75,6 +78,12 @@ public class Main {
             scanRepo = new ScanRepository(db);
             logger.info("✅ Datenbank bereit");
             logger.info("");
+
+            // === PHOTO API SERVER (REST) ===
+            PhotoRepository photoRepo = new PhotoRepository(db);
+            photoApi = new PhotoApiServer(photoRepo);
+            photoApi.start();
+            logger.info("✅ Foto-Galerie: http://localhost:{}/", PhotoApiServer.DEFAULT_PORT);
 
             // 1. Mit OceanServer verbinden
             client.connect();
@@ -162,6 +171,9 @@ public class Main {
             logger.info("SubmarineServer lauscht auf Port {} (max. {} Submarines)",
                     SubmarineServer.DEFAULT_PORT, NUM_SUBMARINES);
 
+            // NavigationController über aktive Tauchgänge informieren (context.md Regel 2)
+            navigator.setSubmarineServer(subServer);
+
             // Kurz warten bis ServerSocket bereit ist
             try { Thread.sleep(500); } catch (InterruptedException ignored) {}
 
@@ -215,6 +227,9 @@ public class Main {
         } finally {
             // Verbindungen sauber trennen
             client.disconnect();
+            if (photoApi != null) {
+                photoApi.stop();
+            }
             if (db != null) {
                 db.disconnect();
             }

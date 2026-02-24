@@ -121,6 +121,14 @@ public class SubmarineServer extends Thread {
     }
 
     /**
+     * Gibt zurück ob aktuell mindestens ein Submarine taucht.
+     * Solange dies true ist, darf das Schiff den Sektor NICHT wechseln (context.md Regel 2).
+     */
+    public boolean isDiving() {
+        return !activeSessions.isEmpty();
+    }
+
+    /**
      * Stoppt den SubmarineServer sauber.
      */
     public void shutdown() {

@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS submarine_measurement_point (
     y INTEGER NOT NULL,
     z INTEGER NOT NULL,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(x, y, z),
     FOREIGN KEY (dive_id) REFERENCES submarine_dive(id),
     FOREIGN KEY (sector_id) REFERENCES sector(id)
 );

@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS submarine_measurement_point (
     y INT NOT NULL,
     z INT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_xyz (x, y, z),
     INDEX idx_dive (dive_id),
     INDEX idx_sector (sector_id),
     FOREIGN KEY (dive_id) REFERENCES submarine_dive(id) ON DELETE CASCADE,
