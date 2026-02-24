@@ -74,6 +74,39 @@ CREATE TABLE IF NOT EXISTS submarine (
     FOREIGN KEY (ship_id) REFERENCES ship(id)
 );
 
+-- Tabelle: submarine_dive (Tauchgänge)
+CREATE TABLE IF NOT EXISTS submarine_dive (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    submarine_id INTEGER NOT NULL,
+    start_time TEXT DEFAULT CURRENT_TIMESTAMP,
+    end_time TEXT,
+    status TEXT,
+    FOREIGN KEY (submarine_id) REFERENCES submarine(id)
+);
+
+-- Tabelle: submarine_measurement_point (3D-Messpunkte)
+CREATE TABLE IF NOT EXISTS submarine_measurement_point (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dive_id INTEGER NOT NULL,
+    sector_id INTEGER,
+    x INTEGER NOT NULL,
+    y INTEGER NOT NULL,
+    z INTEGER NOT NULL,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (dive_id) REFERENCES submarine_dive(id),
+    FOREIGN KEY (sector_id) REFERENCES sector(id)
+);
+
+-- Tabelle: submarine_photo (Fotos als BLOB)
+CREATE TABLE IF NOT EXISTS submarine_photo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dive_id INTEGER NOT NULL,
+    photo_data BLOB NOT NULL,
+    photo_format TEXT DEFAULT 'PNG',
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (dive_id) REFERENCES submarine_dive(id)
+);
+
 -- Tabelle: Accident (Unfälle/Kollisionen)
 CREATE TABLE IF NOT EXISTS accident (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,6 +132,9 @@ CREATE INDEX IF NOT EXISTS idx_ship_scan_ship ON ship_scan(ship_id);
 CREATE INDEX IF NOT EXISTS idx_ship_scan_sector ON ship_scan(sector_id);
 CREATE INDEX IF NOT EXISTS idx_ship_position_timestamp ON ship_position(timestamp);
 CREATE INDEX IF NOT EXISTS idx_ship_scan_timestamp ON ship_scan(timestamp);
+CREATE INDEX IF NOT EXISTS idx_submarine_dive_submarine ON submarine_dive(submarine_id);
+CREATE INDEX IF NOT EXISTS idx_measurement_dive ON submarine_measurement_point(dive_id);
+CREATE INDEX IF NOT EXISTS idx_photo_dive ON submarine_photo(dive_id);
 
 -- ============================================
 -- Initiale Daten

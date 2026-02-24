@@ -1,33 +1,22 @@
 package ocean;
-
 import ocean.communication.oceanserver.OceanClient;
+import ocean.communication.submarine.SubmarineServer;
 import ocean.data.DatabaseConnection;
 import ocean.data.repository.ScanRepository;
 import ocean.data.repository.ShipRepository;
+import ocean.data.repository.SubmarineRepository;
 import ocean.logic.navigation.NavigationController;
 import ocean.model.Ship;
 import ocean.model.Vec2D;
 import ocean.model.RadarEcho;
+import ocean.util.AppLauncher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-
-/**
- * Hauptklasse der ShipApp - Einstiegspunkt der Anwendung.
- *
- * Die ShipApp ist:
- * - Client des OceanServers (steuert Schiffe)
- * - Server für Submarines (empfängt Messdaten)
- * - Datenspeicher (persistiert Messungen)
- * - GUI-Anwendung (visualisiert Daten)
- *
- * @author OceanExplorer Team
- */
 public class Main {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -173,8 +162,13 @@ public class Main {
             try { Thread.sleep(500); } catch (InterruptedException ignored) {}
 
             // Submarine via AppLauncher starten
-            // Die Ship-ID wie der OceanServer sie vergibt: "#<nr>#<name>"
-            String oceanShipId = "#1#" + ship.getName();
+            // Die echte Ship-ID wie der OceanServer sie vergeben hat (z.B. "#1#Explorer-220556")
+            String oceanShipId = client.getShipServerId();
+            if (oceanShipId == null) {
+                logger.warn("Server-ID nicht verfügbar, überspringe Submarine-Start");
+                subServer.shutdown();
+                return;
+            }
             logger.info("Starte Submarine für Schiff: {}", oceanShipId);
 
             boolean subStarted = AppLauncher.startSubmarine(
@@ -206,9 +200,15 @@ public class Main {
             if (db != null) {
                 db.disconnect();
             }
+            // MySQL-Treiber internen Cleanup-Thread sauber beenden
+            // (verhindert die "[WARNING] thread mysql-cj-abandoned-connection-cleanup will linger" Warnung)
+            try {
+                com.mysql.cj.jdbc.AbandonedConnectionCleanupThread.uncheckedShutdown();
+            } catch (Exception ignored) {}
         }
 
         logger.info("=== ShipApp beendet ===");
     }
 }
+
 

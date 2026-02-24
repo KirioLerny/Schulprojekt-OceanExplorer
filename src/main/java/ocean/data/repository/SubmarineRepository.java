@@ -1,3 +1,4 @@
+
 package ocean.data.repository;
 
 import ocean.data.DatabaseConnection;
@@ -113,10 +114,11 @@ public class SubmarineRepository {
      * @param status  "SURFACED" oder "CRASHED"
      */
     public void endDive(long diveId, String status) {
-        dsl.execute(
-            "UPDATE submarine_dive SET end_time = NOW(), status = ? WHERE id = ?",
-            status, diveId
-        );
+        dsl.update(table("submarine_dive"))
+                .set(field("end_time"), now())
+                .set(field("status"), status)
+                .where(field("id").eq(diveId))
+                .execute();
         logger.info("Tauchgang {} beendet mit Status: {}", diveId, status);
     }
 

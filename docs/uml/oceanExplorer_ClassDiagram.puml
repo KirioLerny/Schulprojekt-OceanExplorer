@@ -1,55 +1,39 @@
 @startuml
 skinparam classAttributeIconSize 0
 
+' ============================================================
+' MAIN
+' ============================================================
 
-class ShipApp {
+class Main {
     - logger: Logger
-    - oceanSocket: Socket
+    - OCEAN_SERVER_HOST: String
+    - OCEAN_SERVER_SHIP_PORT: int
+    - OCEAN_SERVER_SUBMARINE_PORT: int
+    + main(args: String[])
+    + run(host: String, port: int)
+}
+
+' ============================================================
+' COMMUNICATION – OceanServer
+' ============================================================
+
+class OceanClient {
+    - host: String
     - port: int
-    + run()
-}
-
-class SubmarineServer {
-    - logger: Logger
-    - port: int
-    + launchSubmarine()
-    - acceptLoop()
-}
-
-class SubmarineSession {
-    - logger: Logger
-    - submarineSocket: Socket
-    - id: String
-    + run()
-    + sendPilot(pilotJson: String)
-    - handleIncoming(json: String)
-}
-
-class DatabaseService {
-    - logger: Logger
-    - DatabaseService()
-    {static} + save(data: ArrayList<String>)
-    {static} + get(): ArrayList<String>
-}
-
-class VisualisationWebservice {
-    - logger: Logger
-    + handle(exchange: HttpExchange)
-    - setCorsHeader(exchange: HttpExchange)
-}
-
-class ShipAppUIFacade {
-    - logger: Logger
-}
-
-class SubmarineControl {
-    - SubmarineControl()
-    {static} + ready(id: String, pos: Vec, dir: Vec, depth: int, distance: int): String
-    {static} + message(type: String, text: String, pos: Vec): String
-    {static} + measure(vectors: ArrayList<Vec>): String
-    {static} + picture(id: String, pos: Vec, dir: Vec, picture: String): String
-    {static} + crash(id: String, message: String, sector: Vec2D, sunkPos: Vec): String
-    {static} + arise(id: String, arisePos: Vec): String
+    - socket: Socket
+    - out: PrintWriter
+    - in: BufferedReader
+    - connected: boolean
+    - shipServerId: String
+    + connect()
+    + disconnect()
+    + launch(name: String, typ: VehicleType, sector: Vec2D, dir: Vec2D): boolean
+    + navigate(rudder: Rudder, course: Course): NavigateResult
+    + radar(): List<RadarEcho>
+    + scan(): ScanResult
+    + getShipServerId(): String
+    + isConnected(): boolean
 }
 
 class CommandFactory {
@@ -61,13 +45,149 @@ class CommandFactory {
     {static} + exit(): String
 }
 
-class ShipAppUI {
+' ============================================================
+' COMMUNICATION – Submarine
+' ============================================================
 
+class SubmarineServer {
+    - logger: Logger
+    - port: int
+    - subRepo: SubmarineRepository
+    - shipId: long
+    - serverSocket: ServerSocket
+    - running: boolean
+    {static} + DEFAULT_PORT: int
+    + run()
+    + shutdown()
+    + isRunning(): boolean
 }
 
+class SubmarineSession {
+    - logger: Logger
+    - socket: Socket
+    - subRepo: SubmarineRepository
+    - shipId: long
+    - out: PrintWriter
+    - in: BufferedReader
+    - submarineDbId: long
+    - diveId: long
+    - submarineId: String
+    + run()
+    - handleMessage(raw: String)
+    - handleReady(json: JSONObject)
+    - handleMeasure(json: JSONObject)
+    - handlePicture(json: JSONObject)
+    - handleCrash(json: JSONObject)
+    - handleArise(json: JSONObject)
+    - buildPilotRoute(): String
+}
 
-abstract class JsonFactory
+' ============================================================
+' LOGIC
+' ============================================================
 
+class NavigationController {
+    - client: OceanClient
+    - ship: Ship
+    - shipId: Long
+    - visitedSectors: Set<Vec2D>
+    - collisionAvoidance: CollisionAvoidance
+    - shipRepository: ShipRepository
+    - scanRepository: ScanRepository
+    + explore(maxSectors: int)
+    + getShip(): Ship
+}
+
+class CollisionAvoidance {
+    + chooseDirection(echoes: List<RadarEcho>, dir: Vec2D): Rudder
+}
+
+' ============================================================
+' DATA
+' ============================================================
+
+class DatabaseConnection {
+    - instance: DatabaseConnection
+    - dataSource: HikariDataSource
+    - dsl: DSLContext
+    - DatabaseConnection()
+    {static} + getInstance(): DatabaseConnection
+    + connect()
+    + disconnect()
+    + getDSL(): DSLContext
+    + getConnection(): Connection
+    + isConnected(): boolean
+}
+
+class ShipRepository {
+    - dsl: DSLContext
+    + save(ship: Ship): long
+    + updatePosition(shipId: long, pos: Vec2D, dir: Vec2D)
+    + findByName(name: String): Ship
+    + findAll(): List<Ship>
+    + getIdByName(name: String): Long
+}
+
+class ScanRepository {
+    - dsl: DSLContext
+    + saveScan(shipId: long, pos: Vec2D, scan: ScanResult)
+    + savePosition(shipId: long, pos: Vec2D, dir: Vec2D)
+    + findScansByShip(shipId: long): List<ScanData>
+    + findPositionsByShip(shipId: long): List<PositionData>
+    + getOrCreateSector(pos: Vec2D): Long
+}
+
+class SubmarineRepository {
+    - dsl: DSLContext
+    + saveSubmarine(name: String, shipId: long): long
+    + deactivateSubmarine(submarineId: long)
+    + startDive(submarineId: long): long
+    + endDive(diveId: long, status: String)
+    + saveMeasurementPoint(diveId: long, x: int, y: int, z: int)
+    + saveMeasurementPoints(diveId: long, points: List<int[]>)
+    + savePhoto(diveId: long, photoData: byte[])
+    + saveAccident(shipId: Long, submarineId: Long, pos: Vec2D, desc: String)
+}
+
+' ============================================================
+' MODEL
+' ============================================================
+
+class Ship {
+    - name: String
+    - position: Vec2D
+    - direction: Vec2D
+    + getName(): String
+    + getPosition(): Vec2D
+    + setPosition(pos: Vec2D)
+    + getDirection(): Vec2D
+    + setDirection(dir: Vec2D)
+}
+
+class RadarEcho {
+    - sector: Vec2D
+    - groundType: Ground
+    + getSector(): Vec2D
+    + getGroundType(): Ground
+    {static} + fromJson(json: JSONObject): RadarEcho
+}
+
+class ScanResult {
+    - sector: Vec2D
+    - depth: int
+    - stdDev: float
+    + getSector(): Vec2D
+    + getDepth(): int
+    + getStdDev(): float
+}
+
+class Vec2D {
+    - x: int
+    - y: int
+    + getX(): int
+    + getY(): int
+    {static} + fromJson(json: JSONObject): Vec2D
+}
 
 enum VehicleType {
     ship
@@ -85,20 +205,54 @@ enum Course {
     backward
 }
 
+enum Ground {
+    WATER
+    LAND
+    REEF
+}
 
-ShipApp --> CommandFactory
-ShipApp --> SubmarineServer
-ShipApp --> ShipAppUIFacade
-ShipApp <--> DatabaseService
+' ============================================================
+' UTIL
+' ============================================================
 
-JsonFactory <|-- CommandFactory
-JsonFactory <|-- SubmarineControl
+class AppLauncher {
+    - AppLauncher()
+    {static} + startSubmarine(path: String, shipId: String, shipHost: String, shipPort: int, oceanHost: String, oceanPort: int): boolean
+}
+
+' ============================================================
+' RELATIONSHIPS
+' ============================================================
+
+Main --> OceanClient
+Main --> DatabaseConnection
+Main --> ShipRepository
+Main --> ScanRepository
+Main --> SubmarineRepository
+Main --> NavigationController
+Main --> SubmarineServer
+Main --> AppLauncher
+
+OceanClient --> CommandFactory
 
 SubmarineServer "1" o-- "*" SubmarineSession
-SubmarineServer --> SubmarineControl
-SubmarineSession --> SubmarineControl
+SubmarineServer --> SubmarineRepository
+SubmarineSession --> SubmarineRepository
 
-ShipAppUIFacade --> ShipAppUI
-VisualisationWebservice --> DatabaseService
+NavigationController --> OceanClient
+NavigationController --> CollisionAvoidance
+NavigationController --> ShipRepository
+NavigationController --> ScanRepository
+NavigationController --> Ship
+
+ShipRepository --> DatabaseConnection
+ScanRepository --> DatabaseConnection
+SubmarineRepository --> DatabaseConnection
+
+Ship --> Vec2D
+RadarEcho --> Vec2D
+RadarEcho --> Ground
+ScanResult --> Vec2D
 
 @enduml
+

@@ -51,6 +51,9 @@ public class OceanClient {
     /** Verbindungsstatus */
     private boolean connected = false;
 
+    /** Die vom OceanServer vergebene Ship-ID (z.B. "#1#Explorer-220556"), gesetzt nach launch() */
+    private String shipServerId = null;
+
     /**
      * Erstellt einen neuen OceanServerClient.
      *
@@ -130,7 +133,9 @@ public class OceanClient {
         boolean success = cmd.equals("launched");
 
         if (success) {
-            logger.info("Schiff '{}' erfolgreich gestartet bei {}", name, sector);
+            // Server-vergebene ID speichern (z.B. "#1#Explorer-220556")
+            shipServerId = json.optString("id", null);
+            logger.info("Schiff '{}' erfolgreich gestartet bei {} (Server-ID: {})", name, sector, shipServerId);
 
             // WICHTIG: Server sendet nach "launched" noch eine "move2d" Nachricht.
             // Diese muss gelesen werden, sonst verrutscht der gesamte Nachrichten-Buffer!
@@ -289,6 +294,16 @@ public class OceanClient {
 
         System.out.println("<<< Empfangen: " + response);
         return response;
+    }
+
+    /**
+     * Gibt die vom OceanServer vergebene Ship-ID zurück (z.B. "#1#Explorer-220556").
+     * Nur verfügbar nach erfolgreichem launch().
+     *
+     * @return Server-ID oder null wenn noch kein launch() durchgeführt
+     */
+    public String getShipServerId() {
+        return shipServerId;
     }
 
     /**
