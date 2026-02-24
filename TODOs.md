@@ -1,2 +1,2 @@
-- Fix  Tauchgänge wenn submarine nicht mehr da muss status von diving auf was anderes gehen
-- Mesurements points und fotos fehlen trotz dessen, dass ich in der app auf foto machen und scan  gedrückt habe
+- ✅ FIXED: Tauchgänge wenn submarine nicht mehr da → status geht jetzt auf ABORTED in SubmarineSession.finally-Block (+ handleArise/handleCrash setzen diveId=-1 um doppeltes Beenden zu verhindern)
+- ✅ FIXED: Measurement points und Fotos fehlen → falscher JSON-Schlüssel: submarine sendet "vecs" (nicht "measurement"). Außerdem war das pilot-Format falsch: submarine erwartet einzelne {"cmd":"pilot","route":"DOWN","action":"None"} Nachrichten, keine actions-Array. Beides behoben in SubmarineSession.java

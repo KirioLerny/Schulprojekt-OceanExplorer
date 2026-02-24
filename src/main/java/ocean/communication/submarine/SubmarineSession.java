@@ -60,6 +60,22 @@ public class SubmarineSession extends Thread {
         } catch (IOException e) {
             logger.warn("Submarine-Verbindung unterbrochen: {}", e.getMessage());
         } finally {
+            // TODO 1 FIX: Wenn Submarine einfach wegbricht (Prozess gestoppt, Timeout, etc.)
+            // ohne arise oder crash zu senden → Tauchgang auf ABORTED setzen,
+            // damit er nicht ewig auf DIVING hängt.
+            if (diveId >= 0) {
+                try {
+                    subRepo.endDive(diveId, "ABORTED");
+                    logger.warn("Tauchgang {} wurde als ABORTED beendet (Verbindung verloren)", diveId);
+                } catch (Exception e) {
+                    logger.error("Fehler beim Beenden des Tauchgangs nach Verbindungsverlust: {}", e.getMessage());
+                }
+            }
+            if (submarineDbId >= 0) {
+                try {
+                    subRepo.deactivateSubmarine(submarineDbId);
+                } catch (Exception ignored) {}
+            }
             closeQuietly();
             logger.info("SubmarineSession beendet: {}", submarineId);
         }
@@ -88,18 +104,29 @@ public class SubmarineSession extends Thread {
     private void handleReady(JSONObject json) {
         submarineId = json.optString("id", "unknown");
         logger.info("=== Submarine bereit: {} ===", submarineId);
+
         submarineDbId = subRepo.saveSubmarine(submarineId, shipId);
+
+        // Wenn diese Session bereits einen Tauchgang hat (z.B. nach erneutem ready),
+        // den alten Tauchgang erst sauber beenden bevor ein neuer gestartet wird.
+        if (diveId >= 0) {
+            logger.warn("Submarine sendet ready erneut – beende alten Tauchgang {} als ABORTED", diveId);
+            subRepo.endDive(diveId, "ABORTED");
+            diveId = -1;
+        }
+
         diveId = subRepo.startDive(submarineDbId);
-        String pilot = buildPilotRoute();
         logger.info(">>> Sende Pilot-Route an {}", submarineId);
-        out.println(pilot);
+        sendPilotRoute();
     }
 
     /** 3D-Messpunkte empfangen und speichern */
     private void handleMeasure(JSONObject json) {
-        JSONArray measurement = json.optJSONArray("measurement");
+        // TODO 2 FIX: Das Submarine sendet die Punkte unter dem Schlüssel "vecs" (nicht "measurement")
+        // Format: {"cmd":"measure","vecs":[[x,y,z],[x,y,z],...]}
+        JSONArray measurement = json.optJSONArray("vecs");
         if (measurement == null) {
-            logger.warn("measure-Nachricht ohne 'measurement' Array");
+            logger.warn("measure-Nachricht ohne 'vecs' Array (empfangen: {})", json);
             return;
         }
         List<int[]> points = new ArrayList<>();
@@ -112,14 +139,18 @@ public class SubmarineSession extends Thread {
         if (diveId >= 0) {
             subRepo.saveMeasurementPoints(diveId, points);
             logger.info("✅ {} Messpunkte gespeichert ({})", points.size(), submarineId);
+        } else {
+            logger.warn("Messpunkte empfangen aber kein aktiver Tauchgang (diveId={})", diveId);
         }
     }
 
     /** PNG-Foto empfangen (Hex-kodiert) und als BLOB speichern */
     private void handlePicture(JSONObject json) {
+        // Das Submarine sendet das Foto unter dem Schlüssel "picture" als Hex-String
+        // Format: {"cmd":"picture","id":"...","pos":{...},"dir":{...},"picture":"<hex>"}
         String pictureHex = json.optString("picture", "");
-        if (pictureHex.isEmpty()) {
-            logger.warn("picture-Nachricht ohne Bilddaten");
+        if (pictureHex.isEmpty() || pictureHex.equals("ERROR")) {
+            logger.warn("picture-Nachricht ohne Bilddaten oder mit Fehler: {}", json);
             return;
         }
         try {
@@ -127,50 +158,101 @@ public class SubmarineSession extends Thread {
             if (diveId >= 0) {
                 subRepo.savePhoto(diveId, photoData);
                 logger.info("✅ Foto gespeichert ({} Bytes, {})", photoData.length, submarineId);
+            } else {
+                logger.warn("Foto empfangen aber kein aktiver Tauchgang (diveId={})", diveId);
             }
         } catch (Exception e) {
             logger.error("Fehler beim Speichern des Fotos: {}", e.getMessage());
         }
     }
 
-    /** Unfall – Tauchgang als CRASHED beenden */
+    /** Unfall – Tauchgang als CRASHED beenden und in accident-Tabelle speichern */
     private void handleCrash(JSONObject json) {
         String message = json.optString("message", "Unbekannter Unfall");
-        logger.warn("Unfall von {}: {}", submarineId, message);
+        logger.warn("💥 CRASH von {}: {} | JSON: {}", submarineId, message, json);
+
+        // Position aus "sector" (Vec2D {"vec2":[x,y]}) auslesen
         Vec2D position = new Vec2D(0, 0);
         if (json.has("sector")) {
             try {
                 JSONArray vec = json.getJSONObject("sector").getJSONArray("vec2");
                 position = new Vec2D(vec.getInt(0), vec.getInt(1));
-            } catch (Exception ignored) {}
+                logger.info("Unfall-Position: ({},{})", position.getX(), position.getY());
+            } catch (Exception e) {
+                logger.warn("Konnte Unfall-Position nicht lesen: {}", e.getMessage());
+            }
         }
-        if (diveId >= 0)        subRepo.endDive(diveId, "CRASHED");
+
+        if (diveId >= 0) {
+            try {
+                subRepo.endDive(diveId, "CRASHED");
+                logger.info("Tauchgang {} als CRASHED beendet", diveId);
+            } catch (Exception e) {
+                logger.error("Fehler beim Beenden des Tauchgangs: {}", e.getMessage());
+            }
+            diveId = -1;
+        }
+
         if (submarineDbId >= 0) {
-            subRepo.deactivateSubmarine(submarineDbId);
-            subRepo.saveAccident(shipId, submarineDbId, position, message);
+            try {
+                subRepo.deactivateSubmarine(submarineDbId);
+                subRepo.saveAccident(shipId, submarineDbId, position, message);
+                logger.warn("✅ Unfall gespeichert in DB");
+            } catch (Exception e) {
+                logger.error("Fehler beim Speichern des Unfalls: {}", e.getMessage());
+            }
+            submarineDbId = -1;
         }
     }
 
     /** Submarine aufgetaucht – Tauchgang als SURFACED beenden */
-    private void handleArise(JSONObject json) {
+    private void handleArise(@SuppressWarnings("unused") JSONObject json) {
         logger.info("Submarine {} aufgetaucht ✅", submarineId);
-        if (diveId >= 0)        subRepo.endDive(diveId, "SURFACED");
-        if (submarineDbId >= 0) subRepo.deactivateSubmarine(submarineDbId);
+        if (diveId >= 0) {
+            subRepo.endDive(diveId, "SURFACED");
+            diveId = -1; // Verhindert doppeltes Beenden in finally
+        }
+        if (submarineDbId >= 0) {
+            subRepo.deactivateSubmarine(submarineDbId);
+            submarineDbId = -1; // Verhindert doppeltes Deaktivieren in finally
+        }
     }
 
-    /** Einfache Route: tauche ab, miss, fotografiere, tauche auf */
-    private String buildPilotRoute() {
-        JSONObject pilot   = new JSONObject();
+    /**
+     * Sendet eine Pilot-Route an das Submarine.
+     *
+     * Das Submarine erwartet EINZELNE Pilot-Nachrichten, nicht eine Liste.
+     * Format: {"cmd":"pilot","route":"<Route>","action":"<action>"}
+     *
+     * Route: C, N, NE, E, SE, S, SW, W, NW, UP, DOWN
+     * Action: "None", "measure", "picture", "arise"
+     *
+     * WICHTIG: Nur 1x DOWN – das Meer kann sehr flach sein (14–20m).
+     * Bei 3x DOWN im flachen Wasser würde das Submarine auf Grund laufen und crashen.
+     *
+     * Ablauf:
+     *  1. DOWN       → 1 Schritt tauchen
+     *  2. C+measure  → 3D-Punkte messen (submarine sendet measure zurück)
+     *  3. C+picture  → Foto (submarine sendet picture zurück)
+     *  4. UP         → 1 Schritt auftauchen
+     *  5. UP+arise   → weiterer Schritt + submarine sendet arise wenn oben
+     */
+    private void sendPilotRoute() {
+        sendPilot("DOWN", "None");     // 1x Abtauchen (reicht für flaches Wasser)
+        sendPilot("C",    "measure");  // Messen – submarine sendet measure
+        sendPilot("C",    "picture");  // Foto – submarine sendet picture
+        sendPilot("UP",   "None");     // Auftauchen
+        sendPilot("UP",   "arise");    // Letzter Schritt – arise-Action auslösen
+    }
+
+    /** Sendet einen einzelnen Pilot-Befehl an das Submarine */
+    private void sendPilot(String route, String action) {
+        JSONObject pilot = new JSONObject();
         pilot.put("cmd", "pilot");
-        JSONArray actions  = new JSONArray();
-
-        JSONObject dive = new JSONObject(); dive.put("action", "dive"); dive.put("distance", 5); actions.put(dive);
-        JSONObject meas = new JSONObject(); meas.put("action", "measure"); actions.put(meas);
-        JSONObject pic  = new JSONObject(); pic.put("action",  "picture"); actions.put(pic);
-        JSONObject aris = new JSONObject(); aris.put("action", "arise");   actions.put(aris);
-
-        pilot.put("actions", actions);
-        return pilot.toString();
+        pilot.put("route", route);
+        pilot.put("action", action);
+        logger.debug(">>> Pilot: route={}, action={}", route, action);
+        out.println(pilot);
     }
 
     private byte[] hexToBytes(String hex) {

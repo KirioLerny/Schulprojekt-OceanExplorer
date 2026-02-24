@@ -43,10 +43,14 @@ public class SubmarineRepository {
     public long saveSubmarine(String submarineName, long shipId) {
         logger.debug("Speichere Submarine: {}", submarineName);
 
-        dsl.insertInto(table("submarine"))
-                .columns(field("name"), field("ship_id"), field("active"))
-                .values(submarineName, shipId, 1)
-                .execute();
+        // ON DUPLICATE KEY UPDATE active=1 → idempotent:
+        // Falls das Submarine neu verbindet (ready wird nochmal gesendet),
+        // schlägt kein Unique-Constraint-Fehler, sondern wir holen die vorhandene ID.
+        dsl.execute(
+            "INSERT INTO submarine (name, ship_id, active) VALUES (?, ?, 1) " +
+            "ON DUPLICATE KEY UPDATE active = 1, ship_id = ?",
+            submarineName, shipId, shipId
+        );
 
         Record r = dsl.select(field("id"))
                 .from(table("submarine"))
@@ -57,7 +61,7 @@ public class SubmarineRepository {
             throw new RuntimeException("Submarine konnte nicht gespeichert werden");
         }
         long id = r.get(field("id", Long.class));
-        logger.info("✅ Submarine gespeichert: {} (ID: {})", submarineName, id);
+        logger.info("✅ Submarine gespeichert/reaktiviert: {} (ID: {})", submarineName, id);
         return id;
     }
 
