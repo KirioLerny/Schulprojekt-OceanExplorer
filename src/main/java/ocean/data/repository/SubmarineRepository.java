@@ -43,14 +43,21 @@ public class SubmarineRepository {
     public long saveSubmarine(String submarineName, long shipId) {
         logger.debug("Speichere Submarine: {}", submarineName);
 
-        // ON DUPLICATE KEY UPDATE active=1 → idempotent:
-        // Falls das Submarine neu verbindet (ready wird nochmal gesendet),
-        // schlägt kein Unique-Constraint-Fehler, sondern wir holen die vorhandene ID.
-        dsl.execute(
-            "INSERT INTO submarine (name, ship_id, active) VALUES (?, ?, 1) " +
-            "ON DUPLICATE KEY UPDATE active = 1, ship_id = ?",
-            submarineName, shipId, shipId
-        );
+        // Versuche INSERT – bei Duplicate Key machen wir stattdessen ein UPDATE
+        try {
+            dsl.execute(
+                "INSERT INTO submarine (name, ship_id, active) VALUES (?, ?, 1) " +
+                "ON DUPLICATE KEY UPDATE active = 1, ship_id = ?",
+                submarineName, shipId, shipId
+            );
+        } catch (Exception e) {
+            // Fallback: falls ON DUPLICATE KEY nicht greift, update direkt
+            logger.warn("INSERT fehlgeschlagen ({}), versuche UPDATE...", e.getMessage());
+            dsl.execute(
+                "UPDATE submarine SET active = 1, ship_id = ? WHERE name = ?",
+                shipId, submarineName
+            );
+        }
 
         Record r = dsl.select(field("id"))
                 .from(table("submarine"))

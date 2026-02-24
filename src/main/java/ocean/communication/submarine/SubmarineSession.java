@@ -105,14 +105,21 @@ public class SubmarineSession extends Thread {
         submarineId = json.optString("id", "unknown");
         logger.info("=== Submarine bereit: {} ===", submarineId);
 
-        submarineDbId = subRepo.saveSubmarine(submarineId, shipId);
-
-        // Wenn diese Session bereits einen Tauchgang hat (z.B. nach erneutem ready),
+        // Wenn diese Session bereits einen Tauchgang hat (z.B. nach erneutem ready nach Crash),
         // den alten Tauchgang erst sauber beenden bevor ein neuer gestartet wird.
         if (diveId >= 0) {
             logger.warn("Submarine sendet ready erneut – beende alten Tauchgang {} als ABORTED", diveId);
-            subRepo.endDive(diveId, "ABORTED");
+            try { subRepo.endDive(diveId, "ABORTED"); } catch (Exception ignored) {}
             diveId = -1;
+        }
+
+        // saveSubmarine ist idempotent (ON DUPLICATE KEY UPDATE) –
+        // bei erneutem ready wird die vorhandene DB-ID zurückgeliefert
+        try {
+            submarineDbId = subRepo.saveSubmarine(submarineId, shipId);
+        } catch (Exception e) {
+            logger.error("Fehler beim Speichern des Submarines: {}", e.getMessage());
+            return;
         }
 
         diveId = subRepo.startDive(submarineDbId);
