@@ -1,6 +1,6 @@
 # 🌊 Ocean Explorer – Projektübersicht
 
-> **Schulprojekt** | Java 21 | Maven | jOOQ | SQLite | Docker  
+> **Schulprojekt** | Java 21 | Maven | jOOQ | MySQL | Docker  
 > Dieses Dokument dient als zentrale Referenz – auch von einem Laptop/anderen Rechner aus nutzbar.
 
 ---
