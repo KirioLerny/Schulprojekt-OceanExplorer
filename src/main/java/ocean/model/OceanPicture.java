@@ -9,12 +9,6 @@ import java.util.HexFormat;
 
 import javax.imageio.ImageIO;
 
-/**
- * <pre>
- * Hilfsmethoden zur Konvertierung von BufferedImage zu Hex-String und umgekehrt.
- * Ermöglicht das Speichern und Laden von PNG-Bildern.
- * </pre>
- */
 public class OceanPicture {
 
 	public static BufferedImage convertHexString2Image(String hexValues) {
@@ -71,5 +65,4 @@ public class OceanPicture {
 		}
 		return null;
 	}
-	
 }

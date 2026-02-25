@@ -65,8 +65,8 @@ public class Main {
     public void run(String host, int port) {
         OceanClient client = new OceanClient(host, port);
         DatabaseConnection db = null;
-        ShipRepository shipRepo = null;
-        ScanRepository scanRepo = null;
+        ShipRepository shipRepo;
+        ScanRepository scanRepo;
         PhotoApiServer photoApi = null;
 
         try {
