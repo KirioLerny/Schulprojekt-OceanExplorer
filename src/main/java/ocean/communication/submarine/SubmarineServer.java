@@ -13,9 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * TCP-Server der auf eingehende Submarine-Verbindungen wartet.
- *
  * <pre>
+ * TCP-Server der auf eingehende Submarine-Verbindungen wartet.
  * Laeuft im eigenen Daemon-Thread.
  * Fuer jede neue Submarine-Verbindung wird eine SubmarineSession gestartet.
  * Verwaltet alle aktiven Sessions und ermoeglicht Warten bis alle fertig sind.

@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * <pre>
  * Hilfklasse zum Starten von Submarine-Prozessen.
+ * </pre>
  */
 public class AppLauncher {
 

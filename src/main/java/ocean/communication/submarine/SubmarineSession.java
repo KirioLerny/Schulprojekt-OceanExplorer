@@ -16,9 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Verwaltet die Kommunikation mit einem einzelnen Submarine.
- *
  * <pre>
+ * Verwaltet die Kommunikation mit einem einzelnen Submarine.
  * Das Submarine sendet nach JEDER Aktion ein neues "ready".
  * Die Session antwortet jeweils mit dem naechsten pilot-Schritt (State-Machine).
  *

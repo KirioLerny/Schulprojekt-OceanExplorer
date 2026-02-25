@@ -6,10 +6,9 @@ import ocean.data.repository.PhotoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** <pre>
  * REST-Endpunkte fuer Submarine-Fotos.
  *
- * <pre>
  * GET  /api/photos                    Liste aller Foto-Metadaten (JSON)
  * GET  /api/photos/{id}               Einzelnes Foto als PNG (image/png)
  * GET  /api/submarines/{id}/photos    Fotos eines bestimmten Submarines

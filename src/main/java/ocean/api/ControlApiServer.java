@@ -64,7 +64,7 @@ public class ControlApiServer {
     private volatile SubmarineServer subServer = null;
     private volatile long activeShipDbId       = -1;
     private volatile String activeShipServerId = null;
-    private volatile boolean lastLaunchSucceeded = false;  // kein TCP-Probe nötig
+    private volatile boolean lastLaunchSucceeded = false;
     private final String oceanHost;
     private volatile int subServerPort = SubmarineServer.DEFAULT_PORT;
 

@@ -7,9 +7,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * Hilfsklasse zur Beschreibung einer 2D-Koordinate bzw. eines 2D-Richtungsvektors.
- *
  * <pre>
+ * Hilfsklasse zur Beschreibung einer 2D-Koordinate bzw. eines 2D-Richtungsvektors.
  * JSON-Darstellung: {"vec2":[x,y]}
  * </pre>
  */

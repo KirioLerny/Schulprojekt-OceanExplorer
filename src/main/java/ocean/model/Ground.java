@@ -1,12 +1,10 @@
 package ocean.model;
 
-// Untergrund-Aufzaehlung
-
-// Alle enums bieten automatisch folgenden Methoden:
-// String name() - Liefert der Enum-Wert als String
-// int ordinal() - Liefert den Enum-Wert als Zahl
-// EnumObj EnumName.valueOf(String name) - wandelt einen String in Enum-Wert um
-
+/**
+ * <pre>
+ * Untergrund-Aufzaehlung.
+ * </pre>
+ */
 public enum Ground {
 	Water,
 	Land,

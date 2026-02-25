@@ -4,6 +4,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * <pre>
+ * Repraesentiert ein Radar-Echo mit Informationen ueber einen Sektor.
+ * </pre>
+ */
 public class RadarEcho {
 	
 	private Vec2D sector;

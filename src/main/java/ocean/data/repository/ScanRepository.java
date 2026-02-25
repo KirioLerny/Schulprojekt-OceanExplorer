@@ -15,9 +15,10 @@ import java.util.List;
 import static org.jooq.impl.DSL.*;
 
 /**
+ * <pre>
  * Repository für ShipScan-Datenbank-Operationen.
- *
  * Speichert Tiefen-Scan-Messungen von Schiffen.
+ * </pre>
  */
 public class ScanRepository {
 

@@ -6,9 +6,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-// Hilfsklasse zur Beschreibung einer 3D-Koordinate bzw. eines 3D-Richtungsvektors
-// entsprechende JSON-Darstellung eines Vec-Objekts:
-// "vec":[x,y,z]
+/**
+ * <pre>
+ * Hilfsklasse zur Beschreibung einer 3D-Koordinate bzw. eines 3D-Richtungsvektors.
+ * JSON-Darstellung: "vec":[x,y,z]
+ * </pre>
+ */
 public class Vec {
 	
 	public static final Vec NullVec = new Vec(0,0,0);
@@ -98,7 +101,7 @@ public class Vec {
 		return x == other.x && y == other.y && z == other.z;
 	}
 	
-	public JSONObject toJson() { // String key, JSONObject jo){
+	public JSONObject toJson() {
 		JSONObject jo = new JSONObject();
 		jo.put("vec", toJsonArray());
 		return jo;

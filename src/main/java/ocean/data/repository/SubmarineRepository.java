@@ -17,9 +17,10 @@ import java.util.Map;
 import static org.jooq.impl.DSL.*;
 
 /**
+ * <pre>
  * Repository für Submarine-Datenbank-Operationen.
- *
  * Speichert Submarine-Metadaten, Tauchgaenge, 3D-Messpunkte und Fotos.
+ * </pre>
  */
 public class SubmarineRepository {
 

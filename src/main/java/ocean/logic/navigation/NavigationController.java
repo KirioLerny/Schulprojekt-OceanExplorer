@@ -38,10 +38,6 @@ public class NavigationController {
     private final ShipRepository shipRepository;
     private final ScanRepository scanRepository;
 
-    /**
-     * Optionaler SubmarineServer – wird vor jedem Sektorwechsel geprueft.
-     * Solange Submarines tauchen darf das Schiff den Sektor nicht wechseln.
-     */
     private SubmarineServer submarineServer;
 
     /**

@@ -7,9 +7,8 @@ import ocean.model.VehicleType;
 import org.json.JSONObject;
 
 /**
- * Factory-Klasse zum Erstellen von JSON-Befehlen fuer den OceanServer.
- *
  * <pre>
+ * Factory-Klasse zum Erstellen von JSON-Befehlen fuer den OceanServer.
  * Der OceanServer erwartet JSON-Nachrichten in einem bestimmten Format.
  * Diese Klasse kapselt die Erstellung dieser Nachrichten.
  *

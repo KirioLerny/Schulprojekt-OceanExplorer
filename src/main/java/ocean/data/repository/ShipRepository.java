@@ -50,7 +50,6 @@ public class ShipRepository {
         int dirX = dir != null ? dir.getX() : 0;
         int dirY = dir != null ? dir.getY() : 1;
 
-        // ON DUPLICATE KEY UPDATE: reaktiviert ein bereits vorhandenes Schiff
         dsl.execute(
             "INSERT INTO ship (name, vehicle_type, current_x, current_y, direction_x, direction_y, active) " +
             "VALUES (?, ?, ?, ?, ?, ?, 1) " +

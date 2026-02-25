@@ -1,7 +1,9 @@
 package ocean.model;
 
 /**
+ * <pre>
  * Zielrichtungen beim Steuern eines Tauchroboters.
+ * </pre>
  */
 public enum Route {
     C,

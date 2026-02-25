@@ -125,9 +125,8 @@ public class CollisionAvoidance {
     }
 
     /**
-     * Prueft ob ein Sektor sicher befahrbar ist.
-     *
      * <pre>
+     * Prueft ob ein Sektor sicher befahrbar ist.
      * Ein Sektor ist sicher wenn:
      *   Ground = Water
      *   Height = 0 (keine Hindernisse)
