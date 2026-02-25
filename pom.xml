@@ -65,6 +65,21 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Mockito für Unit-Tests mit Mocking -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.10.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.10.0</version>
+            <scope>test</scope>
+        </dependency>
+
+
         <!-- Javalin – leichtgewichtiger HTTP/REST-Server (Phase 4: Foto-API) -->
         <dependency>
             <groupId>io.javalin</groupId>
@@ -90,6 +105,13 @@
                 <configuration>
                     <release>21</release>
                 </configuration>
+            </plugin>
+
+            <!-- JAR mit Main-Class -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.3</version>
             </plugin>
 
             <!-- JAR mit Main-Class -->

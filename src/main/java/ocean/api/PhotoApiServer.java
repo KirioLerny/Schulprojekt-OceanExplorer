@@ -358,6 +358,11 @@ public class PhotoApiServer {
     // START / STOP
     // =========================================================
 
+    /** Gibt die interne Javalin-Instanz zurück (für Tests). */
+    public Javalin getApp() {
+        return app;
+    }
+
     /** Startet den HTTP-Server (blockiert nicht). */
     public void start() {
         app.start(port);
