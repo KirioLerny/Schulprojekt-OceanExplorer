@@ -8,7 +8,11 @@ import org.jooq.Record;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.jooq.impl.DSL.*;
 
@@ -225,5 +229,79 @@ public class SubmarineRepository {
                 )
                 .values(shipId, submarineId, position.getX(), position.getY(), description)
                 .execute();
+    }
+
+    // =========================================================
+    // READ METHODS (für WebApp / REST API)
+    // =========================================================
+
+    /** DTO für Submarine-Metadaten. */
+    public record SubmarineInfo(
+            long id,
+            String name,
+            long shipId,
+            boolean active
+    ) {}
+
+    /** DTO für 3D-Messpunkte. */
+    public record MeasurementInfo(int x, int y, int z) {}
+
+    /**
+     * Alle Submarines eines Schiffs.
+     */
+    public List<SubmarineInfo> findByShip(long shipId) {
+        var records = dsl.fetch(
+            "SELECT id, name, ship_id, active FROM submarine WHERE ship_id = ? ORDER BY id DESC",
+            shipId
+        );
+        List<SubmarineInfo> result = new ArrayList<>();
+        for (Record r : records) {
+            Integer activeVal = r.get(field("active", Integer.class));
+            result.add(new SubmarineInfo(
+                r.get(field("id", Long.class)),
+                r.get(field("name", String.class)),
+                r.get(field("ship_id", Long.class)),
+                activeVal != null && activeVal == 1
+            ));
+        }
+        return result;
+    }
+
+    /**
+     * Alle Submarines.
+     */
+    public List<SubmarineInfo> findAll() {
+        var records = dsl.fetch(
+            "SELECT id, name, ship_id, active FROM submarine ORDER BY id DESC"
+        );
+        List<SubmarineInfo> result = new ArrayList<>();
+        for (Record r : records) {
+            Integer activeVal = r.get(field("active", Integer.class));
+            result.add(new SubmarineInfo(
+                r.get(field("id", Long.class)),
+                r.get(field("name", String.class)),
+                r.get(field("ship_id", Long.class)),
+                activeVal != null && activeVal == 1
+            ));
+        }
+        return result;
+    }
+
+    /**
+     * Alle 3D-Messpunkte (distinct x,y,z).
+     */
+    public List<MeasurementInfo> findAllMeasurements() {
+        var records = dsl.fetch(
+            "SELECT DISTINCT x, y, z FROM submarine_measurement_point ORDER BY z, x, y"
+        );
+        List<MeasurementInfo> result = new ArrayList<>();
+        for (Record r : records) {
+            result.add(new MeasurementInfo(
+                r.get(field("x", Integer.class)),
+                r.get(field("y", Integer.class)),
+                r.get(field("z", Integer.class))
+            ));
+        }
+        return result;
     }
 }

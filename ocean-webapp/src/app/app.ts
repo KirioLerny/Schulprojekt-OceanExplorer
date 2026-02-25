@@ -1,0 +1,15 @@
+import { Component } from '@angular/core';
+
+@Component({
+  standalone: false,
+  selector: 'app-root',
+  templateUrl: './app.html',
+  styleUrls: ['./app.scss']
+})
+export class App {
+  navItems = [
+    { path: '/control', icon: 'directions_boat', label: 'Steuerung' },
+    { path: '/data',    icon: 'bar_chart',       label: 'Messdaten' },
+    { path: '/gallery', icon: 'photo_library',   label: 'Bildgalerie' },
+  ];
+}

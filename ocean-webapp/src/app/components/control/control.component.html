@@ -1,0 +1,169 @@
+<div class="control-page">
+
+  <!-- ── Launch Ship ───────────────────────────────────────────────────── -->
+  <mat-card class="section-card" *ngIf="!ship">
+    <mat-card-header>
+      <mat-card-title>🚢 Schiff starten</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="launchForm" (ngSubmit)="launchShip()" class="launch-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Schiffsname</mat-label>
+          <input matInput formControlName="name" placeholder="Explorer">
+          <mat-error *ngIf="launchForm.get('name')?.hasError('required')">Name erforderlich</mat-error>
+        </mat-form-field>
+
+        <div class="row-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Sektor X (0–99)</mat-label>
+            <input matInput type="number" formControlName="sectorX">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Sektor Y (0–99)</mat-label>
+            <input matInput type="number" formControlName="sectorY">
+          </mat-form-field>
+        </div>
+
+        <div class="row-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Richtung X (−1/0/1)</mat-label>
+            <input matInput type="number" formControlName="dirX">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Richtung Y (−1/0/1)</mat-label>
+            <input matInput type="number" formControlName="dirY">
+          </mat-form-field>
+        </div>
+
+        <button mat-raised-button color="primary" type="submit" [disabled]="launchForm.invalid || loading">
+          <mat-icon>directions_boat</mat-icon>
+          Schiff starten
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ── Ship Status ───────────────────────────────────────────────────── -->
+  <mat-card class="section-card ship-status" *ngIf="ship">
+    <mat-card-header>
+      <mat-card-title>🚢 {{ ship.name }}</mat-card-title>
+      <mat-card-subtitle>
+        Sektor: ({{ ship.currentX }}, {{ ship.currentY }}) &nbsp;|&nbsp;
+        Richtung: {{ dirLabel(ship.directionX, ship.directionY) }}
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="status-chips">
+        <mat-chip color="primary" highlighted>Aktiv</mat-chip>
+        <mat-chip [color]="activeSubCount > 0 ? 'warn' : 'accent'" highlighted>
+          {{ activeSubCount }} / {{ maxSubs }} Subs aktiv
+        </mat-chip>
+        <mat-chip *ngIf="!canNavigate" color="warn" highlighted>
+          ⛔ Navigation gesperrt (Subs tauchen)
+        </mat-chip>
+      </div>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="warn" (click)="exitShip()" [disabled]="loading">
+        <mat-icon>logout</mat-icon> Schiff beenden
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- ── Navigation ────────────────────────────────────────────────────── -->
+  <mat-card class="section-card" *ngIf="ship">
+    <mat-card-header>
+      <mat-card-title>⚓ Navigation</mat-card-title>
+      <mat-card-subtitle *ngIf="!canNavigate" class="warn-text">
+        ⚠️ Navigation gesperrt – Submarines tauchen noch
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="nav-grid">
+        <!-- Vorwärts -->
+        <div class="nav-row">
+          <button mat-mini-fab color="primary" (click)="navigate('Left','Forward')"
+                  [disabled]="!canNavigate || loading" matTooltip="Links vorwärts">
+            <mat-icon>turn_left</mat-icon>
+          </button>
+          <button mat-fab color="primary" (click)="navigate('Center','Forward')"
+                  [disabled]="!canNavigate || loading" matTooltip="Geradeaus vorwärts">
+            <mat-icon>arrow_upward</mat-icon>
+          </button>
+          <button mat-mini-fab color="primary" (click)="navigate('Right','Forward')"
+                  [disabled]="!canNavigate || loading" matTooltip="Rechts vorwärts">
+            <mat-icon>turn_right</mat-icon>
+          </button>
+        </div>
+
+        <!-- Scan in der Mitte -->
+        <div class="nav-center">
+          <button mat-raised-button color="accent" (click)="scanSector()"
+                  [disabled]="!ship || loading" matTooltip="Sektor scannen">
+            <mat-icon>radar</mat-icon>
+            Scan
+          </button>
+        </div>
+
+        <!-- Rückwärts -->
+        <div class="nav-row">
+          <button mat-mini-fab (click)="navigate('Left','Backward')"
+                  [disabled]="!canNavigate || loading" matTooltip="Links rückwärts">
+            <mat-icon>turn_left</mat-icon>
+          </button>
+          <button mat-fab (click)="navigate('Center','Backward')"
+                  [disabled]="!canNavigate || loading" matTooltip="Geradeaus rückwärts">
+            <mat-icon>arrow_downward</mat-icon>
+          </button>
+          <button mat-mini-fab (click)="navigate('Right','Backward')"
+                  [disabled]="!canNavigate || loading" matTooltip="Rechts rückwärts">
+            <mat-icon>turn_right</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ── Submarines ─────────────────────────────────────────────────────── -->
+  <mat-card class="section-card" *ngIf="ship">
+    <mat-card-header>
+      <mat-card-title>🤿 Submarines</mat-card-title>
+      <mat-card-subtitle>{{ activeSubCount }}/{{ maxSubs }} aktiv</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="sub-list">
+        <div *ngFor="let sub of submarines" class="sub-item">
+          <mat-icon [color]="sub.active ? 'accent' : 'disabled'">
+            {{ sub.active ? 'directions_boat' : 'anchor' }}
+          </mat-icon>
+          <span class="sub-name">{{ sub.name }}</span>
+          <mat-chip [color]="sub.active ? 'accent' : ''" [highlighted]="sub.active" class="sub-chip">
+            {{ sub.active ? 'Taucht' : 'Fertig' }}
+          </mat-chip>
+          <button mat-icon-button color="warn" *ngIf="sub.active"
+                  (click)="exitSubmarine(sub)" [disabled]="loading"
+                  matTooltip="Submarine einziehen">
+            <mat-icon>eject</mat-icon>
+          </button>
+        </div>
+        <div *ngIf="submarines.length === 0" class="empty-subs">
+          Noch keine Submarines gestartet
+        </div>
+      </div>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="accent"
+              (click)="launchSubmarine()"
+              [disabled]="!canLaunchSub || loading">
+        <mat-icon>water</mat-icon>
+        Submarine starten
+      </button>
+      <span class="sub-hint" *ngIf="!canLaunchSub && activeSubCount >= maxSubs">
+        Maximum ({{ maxSubs }}) erreicht
+      </span>
+    </mat-card-actions>
+  </mat-card>
+
+  <mat-progress-bar *ngIf="loading" mode="indeterminate" class="global-loader"></mat-progress-bar>
+</div>
+

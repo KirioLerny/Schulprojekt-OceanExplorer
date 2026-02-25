@@ -1,0 +1,108 @@
+.control-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.section-card {
+  background: #0f2035;
+  border: 1px solid #1e3a5e;
+  color: #e0f0ff;
+}
+
+.launch-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.warn-text {
+  color: #f44336 !important;
+}
+
+/* Navigation grid */
+.nav-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.nav-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.nav-center {
+  display: flex;
+  justify-content: center;
+}
+
+/* Submarine list */
+.sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.sub-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+}
+
+.sub-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #7ec8ff;
+  word-break: break-all;
+}
+
+.sub-chip {
+  font-size: 0.75rem;
+}
+
+.empty-subs {
+  color: #446a8c;
+  text-align: center;
+  padding: 16px;
+  font-style: italic;
+}
+
+.sub-hint {
+  color: #f44336;
+  font-size: 0.8rem;
+  margin-left: 8px;
+}
+
+.global-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+}
+

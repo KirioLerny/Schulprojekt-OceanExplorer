@@ -1,0 +1,112 @@
+<div class="data-page">
+
+  <!-- ── Stats Row ──────────────────────────────────────────────────────── -->
+  <div class="stats-row">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">🗺️</div>
+        <div class="stat-value">{{ scannedCount }}</div>
+        <div class="stat-label">Sektoren gescannt</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">📏</div>
+        <div class="stat-value">{{ avgDepth }}</div>
+        <div class="stat-label">Ø Tiefe</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">⬇️</div>
+        <div class="stat-value">{{ maxDepth }}</div>
+        <div class="stat-label">Max Tiefe</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">🔵</div>
+        <div class="stat-value">{{ measurementCount }}</div>
+        <div class="stat-label">3D-Messpunkte</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- ── Depth Chart ───────────────────────────────────────────────────── -->
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title>📈 Tiefenmessungen (letzte 50 Scans)</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="chart-wrapper" *ngIf="scans.length > 0; else noData">
+        <canvas #depthChart></canvas>
+      </div>
+      <ng-template #noData>
+        <div class="empty-hint">Noch keine Scandaten vorhanden. Starte ein Schiff und scanne Sektoren.</div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ── Heatmap ────────────────────────────────────────────────────────── -->
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title>🗺️ Tiefen-Heatmap (100×100 Raster)</mat-card-title>
+      <mat-card-subtitle>Dunkel = flach, Hell = tief</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content class="heatmap-content">
+      <div class="heatmap-wrapper" *ngIf="scans.length > 0; else noHeatmap">
+        <canvas #heatmapCanvas width="500" height="500" class="heatmap-canvas"></canvas>
+        <div class="heatmap-legend">
+          <div class="legend-bar"></div>
+          <div class="legend-labels">
+            <span>{{ gridMin | number:'1.0-0' }}m</span>
+            <span>{{ ((gridMax + gridMin) / 2) | number:'1.0-0' }}m</span>
+            <span>{{ gridMax | number:'1.0-0' }}m</span>
+          </div>
+        </div>
+      </div>
+      <ng-template #noHeatmap>
+        <div class="empty-hint">Noch keine Scandaten.</div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ── Scan Table ─────────────────────────────────────────────────────── -->
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title>📋 Scan-Protokoll</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="scans" class="scan-table" *ngIf="scans.length > 0">
+          <ng-container matColumnDef="x">
+            <th mat-header-cell *matHeaderCellDef>X</th>
+            <td mat-cell *matCellDef="let s">{{ s.x }}</td>
+          </ng-container>
+          <ng-container matColumnDef="y">
+            <th mat-header-cell *matHeaderCellDef>Y</th>
+            <td mat-cell *matCellDef="let s">{{ s.y }}</td>
+          </ng-container>
+          <ng-container matColumnDef="averageDepth">
+            <th mat-header-cell *matHeaderCellDef>Ø Tiefe (m)</th>
+            <td mat-cell *matCellDef="let s">{{ s.averageDepth | number:'1.1-1' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="stdDeviation">
+            <th mat-header-cell *matHeaderCellDef>σ</th>
+            <td mat-cell *matCellDef="let s">{{ s.stdDeviation | number:'1.2-2' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="timestamp">
+            <th mat-header-cell *matHeaderCellDef>Zeitstempel</th>
+            <td mat-cell *matCellDef="let s">{{ s.timestamp }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+        <div *ngIf="scans.length === 0 && !loading" class="empty-hint">Keine Scans in der Datenbank.</div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+</div>
+

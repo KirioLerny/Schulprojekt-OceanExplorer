@@ -1,0 +1,136 @@
+.gallery-page {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-bar {
+  background: #0f2035;
+  border: 1px solid #1e3a5e;
+}
+
+.filter-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-field {
+  flex: 1;
+  min-width: 220px;
+}
+
+.photo-count {
+  color: #8ab8d8;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.sub-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.photo-card {
+  background: #0f2035;
+  border: 1px solid #1e3a5e;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  padding: 0;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(30,111,186,0.4);
+    border-color: #3a8cc8;
+  }
+}
+
+.photo-thumb {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+  background: #071020;
+}
+
+.photo-meta {
+  padding: 10px 12px !important;
+
+  .sub-label  { font-weight: 600; color: #7ec8ff; font-size: 0.9rem; }
+  .pos-label  { color: #8ab8d8; font-size: 0.8rem; margin-top: 4px; }
+  .time-label { color: #446a8c; font-size: 0.75rem; margin-top: 4px; }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 0;
+  color: #446a8c;
+
+  .empty-icon { font-size: 4rem; margin-bottom: 16px; }
+  p { margin: 4px 0; }
+}
+
+/* Lightbox */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lb-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  color: #7ec8ff;
+  background: rgba(14,31,56,0.7);
+}
+
+.lb-prev, .lb-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #7ec8ff;
+  background: rgba(14,31,56,0.7);
+  border: 1px solid #1e6fba;
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+}
+
+.lb-prev { left: 16px; }
+.lb-next { right: 16px; }
+
+.lb-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 90vw;
+}
+
+.lb-image {
+  max-width: 88vw;
+  max-height: 76vh;
+  border-radius: 8px;
+  border: 2px solid #3a8cc8;
+}
+
+.lb-info {
+  color: #8ab8d8;
+  font-size: 0.85rem;
+  text-align: center;
+}
+

@@ -98,6 +98,24 @@ public class ScanRepository {
     }
 
     /**
+     * Lädt alle Scans aller Schiffe.
+     *
+     * @return Liste aller Scan-Daten
+     */
+    public List<ScanData> findAllScans() {
+        var records = dsl.select()
+                .from(table("ship_scan"))
+                .orderBy(field("timestamp").desc())
+                .fetch();
+
+        List<ScanData> scans = new ArrayList<>();
+        for (Record record : records) {
+            scans.add(mapToScanData(record));
+        }
+        return scans;
+    }
+
+    /**
      * Lädt alle Scans eines Schiffs.
      *
      * @param shipId ID des Schiffs

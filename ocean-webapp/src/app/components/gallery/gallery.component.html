@@ -1,0 +1,82 @@
+<div class="gallery-page">
+
+  <!-- Filter Bar -->
+  <mat-card class="filter-bar">
+    <mat-card-content class="filter-content">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Nach Submarine filtern</mat-label>
+        <input matInput [(ngModel)]="filterSub" placeholder="z.B. Explorer">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+      <div class="photo-count">
+        {{ filtered.length }} / {{ photos.length }} Fotos
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Sub filter chips -->
+  <div class="sub-chips" *ngIf="uniqueSubs.length > 0">
+    <mat-chip (click)="filterSub = ''" [highlighted]="filterSub === ''">
+      Alle
+    </mat-chip>
+    <mat-chip *ngFor="let sub of uniqueSubs"
+              (click)="filterSub = sub"
+              [highlighted]="filterSub === sub"
+              color="accent">
+      🤿 {{ sub }}
+    </mat-chip>
+  </div>
+
+  <!-- Loading -->
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
+  <!-- Empty state -->
+  <div *ngIf="!loading && photos.length === 0" class="empty-state">
+    <div class="empty-icon">🤿</div>
+    <p>Noch keine Fotos vorhanden.</p>
+    <p>Starte Submarines um Aufnahmen zu machen.</p>
+  </div>
+
+  <!-- Photo Grid -->
+  <div class="photo-grid" *ngIf="filtered.length > 0">
+    <mat-card *ngFor="let photo of filtered; let i = index"
+              class="photo-card"
+              (click)="openLightbox(i)">
+      <img [src]="photoUrl(photo.id)"
+           [alt]="'Foto ' + photo.id"
+           class="photo-thumb"
+           loading="lazy">
+      <mat-card-content class="photo-meta">
+        <div class="sub-label">🤿 {{ photo.submarineName }}</div>
+        <div class="pos-label">📍 ({{ photo.x }}, {{ photo.y }}, {{ photo.z }})</div>
+        <div class="time-label">🕐 {{ photo.timestamp }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" *ngIf="lightboxOpen" (click)="closeLightbox()">
+    <button mat-icon-button class="lb-close" (click)="closeLightbox()">
+      <mat-icon>close</mat-icon>
+    </button>
+    <button mat-icon-button class="lb-prev" (click)="navigate(-1); $event.stopPropagation()">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <div class="lb-content" (click)="$event.stopPropagation()">
+      <img *ngIf="currentPhoto"
+           [src]="photoUrl(currentPhoto.id)"
+           class="lb-image"
+           [alt]="'Foto ' + currentPhoto!.id">
+      <div class="lb-info" *ngIf="currentPhoto">
+        🤿 {{ currentPhoto.submarineName }} &nbsp;|&nbsp;
+        📍 ({{ currentPhoto.x }}, {{ currentPhoto.y }}, {{ currentPhoto.z }}) &nbsp;|&nbsp;
+        🕐 {{ currentPhoto.timestamp }} &nbsp;|&nbsp;
+        {{ lightboxIndex + 1 }} / {{ filtered.length }}
+      </div>
+    </div>
+    <button mat-icon-button class="lb-next" (click)="navigate(1); $event.stopPropagation()">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+</div>
+

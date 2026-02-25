@@ -1,0 +1,39 @@
+
+<mat-sidenav-container class="sidenav-container">
+
+  <mat-sidenav #sidenav mode="side" opened class="sidenav">
+    <div class="sidenav-header">
+      <span class="logo">🌊</span>
+      <span class="app-title">Ocean Explorer</span>
+    </div>
+    <mat-divider></mat-divider>
+    <mat-nav-list>
+      <a mat-list-item
+         *ngFor="let item of navItems"
+         [routerLink]="item.path"
+         routerLinkActive="active-link">
+        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+        <span matListItemTitle>{{ item.label }}</span>
+      </a>
+    </mat-nav-list>
+    <mat-divider></mat-divider>
+    <div class="sidenav-footer">
+      <small>Port 8080</small>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="main-content">
+    <mat-toolbar class="top-bar">
+      <span>🌊 Ocean Explorer Control</span>
+      <span class="spacer"></span>
+      <small class="server-hint">Backend: localhost:8080</small>
+    </mat-toolbar>
+    <div class="page-content">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+
+</mat-sidenav-container>
+
+
+

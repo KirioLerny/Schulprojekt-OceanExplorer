@@ -1,0 +1,53 @@
+@use '@angular/material' as mat;
+
+// Custom dark ocean theme
+@include mat.core();
+
+$ocean-primary: mat.m2-define-palette(mat.$m2-light-blue-palette, 600, 300, 900);
+$ocean-accent:  mat.m2-define-palette(mat.$m2-cyan-palette, 400, 200, 700);
+$ocean-warn:    mat.m2-define-palette(mat.$m2-red-palette);
+
+$ocean-theme: mat.m2-define-dark-theme((
+  color: (
+    primary: $ocean-primary,
+    accent:  $ocean-accent,
+    warn:    $ocean-warn,
+  ),
+  typography: mat.m2-define-typography-config(),
+  density: 0,
+));
+
+@include mat.all-component-themes($ocean-theme);
+
+/* Global */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Roboto', 'Segoe UI', sans-serif;
+  background: #071828;
+  color: #e0f0ff;
+  color-scheme: dark;
+}
+
+mat-card {
+  background: #0f2035 !important;
+  color: #e0f0ff !important;
+}
+mat-card-title    { color: #7ec8ff !important; }
+mat-card-subtitle { color: #8ab8d8 !important; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #071020; }
+::-webkit-scrollbar-thumb { background: #1e3a5e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a6090; }
+
+.mat-mdc-form-field input { color: #e0f0ff !important; }
+.mat-mdc-form-field .mat-mdc-floating-label { color: #8ab8d8 !important; }
+
+.mat-mdc-table { background: transparent !important; }
+.mat-mdc-header-row { background: #0a1c30 !important; }
+.mat-mdc-row { border-bottom-color: #1e3a5e !important; }
+.mat-mdc-header-cell { color: #7ec8ff !important; }
+.mat-mdc-cell { color: #c0dcf0 !important; }
