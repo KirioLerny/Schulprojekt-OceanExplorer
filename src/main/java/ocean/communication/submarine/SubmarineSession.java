@@ -54,6 +54,10 @@ public class SubmarineSession extends Thread {
     private String submarineId = "unknown";
 
     private int pilotStep = 0;
+    /** true nachdem arise sauber abgehandelt wurde – verhindert ABORTED im finally-Block */
+    private volatile boolean arised = false;
+    /** true wenn manuelle Steuerung aktiv ist – deaktiviert den automatischen PILOT_STEPS-Ablauf */
+    private volatile boolean manualMode = false;
 
     private Runnable onFinished;
 
@@ -105,7 +109,7 @@ public class SubmarineSession extends Thread {
         } catch (IOException e) {
             logger.warn("Submarine-Verbindung unterbrochen: {}", e.getMessage());
         } finally {
-            if (diveId >= 0) {
+            if (!arised && diveId >= 0) {
                 try {
                     subRepo.endDive(diveId, "ABORTED");
                     logger.warn("Tauchgang {} als ABORTED beendet (Verbindung verloren)", diveId);
@@ -113,7 +117,7 @@ public class SubmarineSession extends Thread {
                     logger.error("Fehler beim Beenden des Tauchgangs: {}", e.getMessage());
                 }
             }
-            if (submarineDbId >= 0) {
+            if (!arised && submarineDbId >= 0) {
                 try { subRepo.deactivateSubmarine(submarineDbId); } catch (Exception ignored) {}
             }
             closeQuietly();
@@ -160,6 +164,12 @@ public class SubmarineSession extends Thread {
             diveId = subRepo.startDive(submarineDbId);
         } else {
             logger.debug("Submarine ready nach Schritt {}: {}", pilotStep, submarineId);
+        }
+
+        // Im manuellen Modus sendet die WebApp Pilot-Befehle – kein automatischer Ablauf
+        if (manualMode) {
+            logger.debug("Manuelle Steuerung aktiv - warte auf Pilot-Befehl vom Nutzer");
+            return;
         }
 
         if (pilotStep < PILOT_STEPS.length) {
@@ -278,6 +288,7 @@ public class SubmarineSession extends Thread {
      * </pre>
      */
     private void handleArise(JSONObject json) {
+        arised = true;   // verhindert ABORTED im finally-Block
         logger.info("Submarine {} aufgetaucht (arise) - beende Session sauber", submarineId);
 
         // Arise-Position loggen (optional)
@@ -304,28 +315,36 @@ public class SubmarineSession extends Thread {
     }
 
     /**
+     * Schaltet auf manuelle Steuerung um.
+     * Der automatische PILOT_STEPS-Ablauf wird deaktiviert.
+     * Die WebApp sendet danach Pilot-Befehle direkt via sendPilotManual().
+     */
+    public void enableManualMode() {
+        manualMode = true;
+        pilotStep  = PILOT_STEPS.length; // Automat abschalten
+        logger.info("Submarine {} wechselt in manuellen Modus", submarineId);
+    }
+
+    /**
+     * Sendet einen manuellen Pilot-Befehl an das Submarine.
+     * Protokoll: { "cmd":"pilot", "route":"ROUTE", "action":"..." }
+     *
+     * @param route  Route-Wert (C, N, NE, E, SE, S, SW, W, NW, UP, DOWN, None)
+     * @param action Aktion (None, measure, picture, take_photo, locate, arise)
+     */
+    public void sendPilotManual(String route, String action) {
+        logger.info(">>> Manual Pilot: route={}, action={} -> {}", route, action, submarineId);
+        sendPilot(route, action);
+    }
+
+    /**
      * Schickt dem Submarine den Pilot-Befehl UP+arise, damit es auftaucht und sich sauber beendet.
-     * Wird aufgerufen wenn der Nutzer "Einziehen" klickt.
-     *
-     * <pre>
-     * Ablauf:
-     *   ShipApp sendet: { "cmd":"pilot", "route":"UP", "action":"arise" }
-     *   Submarine fuehrt UP-Route aus, sendet dann: { "cmd":"arise", ... }
-     *   handleArise() schliesst die Session sauber.
-     *
-     * WICHTIG: Wir senden einen pilot-Befehl, NICHT einen arise-Befehl.
-     * "arise" ist ein Ereignis das das Submarine an uns schickt.
-     * </pre>
      */
     public void sendAriseAndClose() {
+        arised = true;   // verhindert ABORTED im finally-Block
         logger.info("Sende Pilot UP+arise an Submarine {} (Einziehen)", submarineId);
-        // Pilot-Schritt direkt auf letzten Schritt setzen, damit handleReady nicht noch
-        // einen weiteren Schritt sendet falls das Submarine noch ein ready schickt
         pilotStep = PILOT_STEPS.length;
         sendPilot("UP", "arise");
-        // DB-Cleanup passiert in handleArise wenn das Submarine antwortet.
-        // Sicherheits-Timeout: closeQuietly wird nicht sofort aufgerufen –
-        // das Submarine beendet sich von selbst nach dem arise.
     }
 
     private void sendPilot(String route, String action) {

@@ -142,3 +142,31 @@
   z-index: 9999;
 }
 
+// ── Submarine Pilot-Steuerung ──────────────────────────────────────────
+.sub-control-card {
+  border-color: #1a5276 !important;
+  background: #081828 !important;
+}
+
+.sub-pilot-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.sub-pilot-row {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  gap: 8px;
+  justify-items: center;
+  align-items: center;
+
+  &.sub-actions {
+    grid-template-columns: repeat(3, auto);
+    gap: 12px;
+    margin-top: 8px;
+  }
+}
+

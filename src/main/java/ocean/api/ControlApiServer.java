@@ -104,6 +104,7 @@ public class ControlApiServer {
         javalin.get("/api/submarines/sessions",           this::handleGetSubmarineSessions);
         javalin.post("/api/submarine/disconnect",         this::handleDisconnectSubmarine);
         javalin.post("/api/submarine/arise",              this::handleAriseSubmarine);
+        javalin.post("/api/submarine/pilot",              this::handlePilotSubmarine);
         javalin.get("/api/scans",                         this::handleGetAllScans);
         javalin.post("/api/submarine/launch",             this::handleLaunchSubmarine);
         javalin.post("/api/submarine/{id}/exit",          this::handleExitSubmarine);
@@ -384,6 +385,28 @@ public class ControlApiServer {
         boolean found = subServer.ariseSubmarine(subId);
         if (found) ctx.json(ok("Submarine " + subId + " eingezogen (arise)"));
         else       ctx.json(err("Submarine " + subId + " nicht gefunden oder bereits beendet"));
+    }
+
+    /**
+     * Sendet einen Pilot-Befehl an ein Submarine (manuelle Fernsteuerung).
+     * POST /api/submarine/pilot  { "submarineId":"...", "route":"C", "action":"None" }
+     *
+     * route:  C, N, NE, E, SE, S, SW, W, NW, UP, DOWN, None
+     * action: None, take_photo, locate
+     */
+    private void handlePilotSubmarine(Context ctx) {
+        JSONObject body;
+        try { body = new JSONObject(ctx.body()); } catch (Exception e) {
+            ctx.status(400).json(err("Ungültiger JSON-Body")); return;
+        }
+        String subId  = body.optString("submarineId", "");
+        String route  = body.optString("route",  "C");
+        String action = body.optString("action", "None");
+        if (subId.isBlank()) { ctx.status(400).json(err("submarineId fehlt")); return; }
+        if (subServer == null) { ctx.json(err("Kein SubmarineServer aktiv")); return; }
+        boolean found = subServer.pilotSubmarine(subId, route, action);
+        if (found) ctx.json(ok("Pilot gesendet: route=" + route + " action=" + action));
+        else       ctx.json(err("Submarine " + subId + " nicht gefunden"));
     }
 
     private List<Map<String, Object>> buildSubmarineList(Long shipId) {

@@ -19,6 +19,8 @@ export class ControlComponent implements OnInit, OnDestroy {
   submarines: Submarine[] = [];
   sessions: {submarineId: string, pilotStep: number}[] = [];
   maxSubs = 4;
+  /** Name des aktuell ausgewählten Submarines für die Steuerung */
+  selectedSub: string | null = null;
 
   readonly PILOT_LABELS = ['⬇ Taucht ab', '📏 Messen', '📸 Foto', '⬆ Auftauchen', '✅ Aufgetaucht'];
 
@@ -100,19 +102,6 @@ export class ControlComponent implements OnInit, OnDestroy {
     return this.PILOT_LABELS[step] ?? `Schritt ${step}`;
   }
 
-  /** Submarine sauber einziehen via arise (Submarine-App beendet sich dann automatisch). */
-  ariseByName(subName: string) {
-    if (!confirm(`Submarine "${subName}" einziehen (arise)?`)) return;
-    this.loading = true;
-    this.api.ariseSubmarine(subName).subscribe({
-      next: res => {
-        this.loading = false;
-        this.snack.open(res.success ? `${subName} eingezogen` : (res.error ?? 'Fehler'), 'OK', { duration: 3000 });
-        this.loadSubmarines();
-      },
-      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
-    });
-  }
 
   get canNavigate(): boolean {
     return !!this.ship && this.activeSubCount === 0;
@@ -242,6 +231,45 @@ export class ControlComponent implements OnInit, OnDestroy {
     if (x > 0) return 'Ost';
     if (x < 0) return 'West';
     return '-';
+  }
+
+  /** Steuerungs-Panel für ein Submarine ein-/ausklappen */
+  toggleSubControl(subName: string) {
+    this.selectedSub = this.selectedSub === subName ? null : subName;
+  }
+
+  /**
+   * Sendet einen Pilot-Befehl an das aktuell ausgewählte Submarine.
+   * route: C, N, NE, E, SE, S, SW, W, NW, UP, DOWN, None
+   * action: None, take_photo, locate
+   */
+  pilotSub(route: string, action: string) {
+    if (!this.selectedSub) return;
+    this.loading = true;
+    this.api.pilotSubmarine(this.selectedSub, route, action).subscribe({
+      next: res => {
+        this.loading = false;
+        if (!res.success) {
+          this.snack.open(res.error ?? 'Fehler', 'OK', { duration: 3000 });
+        }
+      },
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
+    });
+  }
+
+  /** Submarine sauber einziehen via arise. */
+  ariseByName(subName: string) {
+    if (!confirm(`Submarine "${subName}" einziehen (arise)?`)) return;
+    this.loading = true;
+    this.api.ariseSubmarine(subName).subscribe({
+      next: res => {
+        this.loading = false;
+        this.snack.open(res.success ? `${subName} eingezogen` : (res.error ?? 'Fehler'), 'OK', { duration: 3000 });
+        if (this.selectedSub === subName) this.selectedSub = null;
+        this.loadSubmarines();
+      },
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
+    });
   }
 }
 

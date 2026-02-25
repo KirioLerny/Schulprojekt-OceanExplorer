@@ -97,6 +97,12 @@ export class OceanApiService {
       .pipe(catchError(this.handleError));
   }
 
+  /** Sendet einen manuellen Pilot-Befehl an ein Submarine. */
+  pilotSubmarine(submarineId: string, route: string, action: string): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${this.BASE}/api/submarine/pilot`, { submarineId, route, action })
+      .pipe(catchError(this.handleError));
+  }
+
   getAllSubmarines(): Observable<Submarine[]> {
     return this.http.get<Submarine[]>(`${this.BASE}/api/submarines`)
       .pipe(catchError(this.handleError));

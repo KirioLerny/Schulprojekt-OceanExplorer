@@ -169,8 +169,26 @@ public class SubmarineServer extends Thread {
     }
 
     /**
+     * Sendet einen manuellen Pilot-Befehl an ein Submarine.
+     *
+     * @param submarineId ID des Submarines
+     * @param route       Route-Wert (C, N, NE, E, SE, S, SW, W, NW, UP, DOWN, None)
+     * @param action      Aktion (None, take_photo, locate, arise, ...)
+     * @return true wenn Submarine gefunden und Befehl gesendet
+     */
+    public boolean pilotSubmarine(String submarineId, String route, String action) {
+        for (SubmarineSession s : activeSessions) {
+            if (submarineId.equals(s.getSubmarineId())) {
+                s.enableManualMode();
+                s.sendPilotManual(route, action);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Sendet einen arise-Befehl an ein Submarine, damit es sich sauber beendet.
-     * Die Submarine-Anwendung beendet sich nach Empfang automatisch.
      *
      * @param submarineId ID des Submarines
      * @return true wenn gefunden und arise gesendet

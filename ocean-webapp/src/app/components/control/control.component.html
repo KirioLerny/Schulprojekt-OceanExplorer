@@ -141,15 +141,20 @@
           <mat-chip [color]="sub.active ? 'accent' : ''" [highlighted]="sub.active" class="sub-chip">
             {{ sub.active ? 'Taucht' : 'Fertig' }}
           </mat-chip>
-          <!-- Dive step progress for live subs -->
           <span class="sub-step" *ngIf="sub.active && sessionFor(sub.name) as sess">
             {{ stepLabel(sess.pilotStep) }}
           </span>
-          <!-- Arise: sauber einziehen (Submarine-App beendet sich automatisch) -->
+          <!-- Einziehen -->
           <button mat-icon-button color="warn" *ngIf="sub.active"
                   (click)="ariseByName(sub.name)" [disabled]="loading"
                   matTooltip="Submarine einziehen (arise)">
             <mat-icon>vertical_align_top</mat-icon>
+          </button>
+          <!-- Steuerung aufklappen -->
+          <button mat-icon-button color="accent" *ngIf="sub.active"
+                  (click)="toggleSubControl(sub.name)" [disabled]="loading"
+                  matTooltip="Steuerung anzeigen">
+            <mat-icon>{{ selectedSub === sub.name ? 'expand_less' : 'gamepad' }}</mat-icon>
           </button>
         </div>
         <div *ngIf="submarines.length === 0" class="empty-subs">
@@ -168,6 +173,82 @@
         Maximum ({{ maxSubs }}) erreicht
       </span>
     </mat-card-actions>
+  </mat-card>
+
+  <!-- ── Submarine Steuerung ─────────────────────────────────────────── -->
+  <mat-card class="section-card sub-control-card" *ngIf="ship && selectedSub">
+    <mat-card-header>
+      <mat-card-title>🤿 Submarine Steuerung</mat-card-title>
+      <mat-card-subtitle>{{ selectedSub }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+
+      <!-- Richtungspad -->
+      <div class="sub-pilot-grid">
+
+        <!-- Zeile 1: NW / N / NE -->
+        <div class="sub-pilot-row">
+          <button mat-mini-fab (click)="pilotSub('NW','None')" [disabled]="loading" matTooltip="NW">
+            <mat-icon>north_west</mat-icon>
+          </button>
+          <button mat-fab color="primary" (click)="pilotSub('N','None')" [disabled]="loading" matTooltip="Nord">
+            <mat-icon>north</mat-icon>
+          </button>
+          <button mat-mini-fab (click)="pilotSub('NE','None')" [disabled]="loading" matTooltip="NE">
+            <mat-icon>north_east</mat-icon>
+          </button>
+        </div>
+
+        <!-- Zeile 2: W / Tauchen↑ / E -->
+        <div class="sub-pilot-row">
+          <button mat-fab (click)="pilotSub('W','None')" [disabled]="loading" matTooltip="West">
+            <mat-icon>west</mat-icon>
+          </button>
+          <button mat-fab color="accent" (click)="pilotSub('UP','None')" [disabled]="loading" matTooltip="Auftauchen">
+            <mat-icon>arrow_upward</mat-icon>
+          </button>
+          <button mat-fab (click)="pilotSub('E','None')" [disabled]="loading" matTooltip="Ost">
+            <mat-icon>east</mat-icon>
+          </button>
+        </div>
+
+        <!-- Zeile 3: SW / Tauchen↓ / SE -->
+        <div class="sub-pilot-row">
+          <button mat-mini-fab (click)="pilotSub('SW','None')" [disabled]="loading" matTooltip="SW">
+            <mat-icon>south_west</mat-icon>
+          </button>
+          <button mat-fab color="warn" (click)="pilotSub('DOWN','None')" [disabled]="loading" matTooltip="Abtauchen">
+            <mat-icon>arrow_downward</mat-icon>
+          </button>
+          <button mat-mini-fab (click)="pilotSub('SE','None')" [disabled]="loading" matTooltip="SE">
+            <mat-icon>south_east</mat-icon>
+          </button>
+        </div>
+
+        <!-- Zeile 4: Süd -->
+        <div class="sub-pilot-row">
+          <div></div>
+          <button mat-fab color="primary" (click)="pilotSub('S','None')" [disabled]="loading" matTooltip="Süd">
+            <mat-icon>south</mat-icon>
+          </button>
+          <div></div>
+        </div>
+
+        <!-- Zeile 5: Aktionen -->
+        <div class="sub-pilot-row sub-actions">
+          <button mat-raised-button (click)="pilotSub('None','take_photo')" [disabled]="loading" matTooltip="Foto aufnehmen">
+            <mat-icon>photo_camera</mat-icon> Foto
+          </button>
+          <button mat-raised-button (click)="pilotSub('None','locate')" [disabled]="loading" matTooltip="Objekte orten">
+            <mat-icon>radar</mat-icon> Orten
+          </button>
+          <button mat-raised-button (click)="pilotSub('C','None')" [disabled]="loading" matTooltip="Vor (Center)">
+            <mat-icon>straight</mat-icon> Vor
+          </button>
+        </div>
+
+      </div>
+    </mat-card-content>
   </mat-card>
 
   <mat-progress-bar *ngIf="loading" mode="indeterminate" class="global-loader"></mat-progress-bar>
