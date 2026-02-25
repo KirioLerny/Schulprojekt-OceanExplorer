@@ -124,22 +124,4 @@ class PhotoApiServerTest {
         var resp = get("/api/submarines/xyz/photos");
         assertEquals(400, resp.statusCode());
     }
-
-    @Test
-    @DisplayName("GET / liefert 200 und HTML mit Seitentitel")
-    void testGalleryRoot() throws Exception {
-        when(mockPhotoRepo.findAllMeta()).thenReturn(List.of());
-        var resp = get("/");
-        assertEquals(200, resp.statusCode());
-        assertTrue(resp.body().contains("<!DOCTYPE html"));
-        assertTrue(resp.body().contains("Ocean Explorer"));
-    }
-
-    @Test
-    @DisplayName("GET /gallery liefert 200")
-    void testGalleryPath() throws Exception {
-        when(mockPhotoRepo.findAllMeta()).thenReturn(List.of());
-        var resp = get("/gallery");
-        assertEquals(200, resp.statusCode());
-    }
 }

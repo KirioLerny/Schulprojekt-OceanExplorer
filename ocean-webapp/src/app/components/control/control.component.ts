@@ -1,10 +1,9 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { OceanApiService } from '../../services/ocean-api.service';
 import { Ship, Submarine } from '../../models/models';
-import { interval, Subscription } from 'rxjs';
-import { switchMap, startWith } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 @Component({
   standalone: false,
@@ -20,52 +19,60 @@ export class ControlComponent implements OnInit, OnDestroy {
   submarines: Submarine[] = [];
   maxSubs = 4;
 
-  private pollSub?: Subscription;
+  private pollTimer?: ReturnType<typeof setInterval>;
+  private shipSub?:   Subscription;
+  private subSub?:    Subscription;
 
   constructor(
     private fb: FormBuilder,
     private api: OceanApiService,
-    private snack: MatSnackBar
+    private snack: MatSnackBar,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
     this.launchForm = this.fb.group({
-      name: ['Explorer', [Validators.required, Validators.minLength(3)]],
+      name:    ['Explorer', [Validators.required, Validators.minLength(3)]],
       sectorX: [50, [Validators.required, Validators.min(0), Validators.max(99)]],
       sectorY: [50, [Validators.required, Validators.min(0), Validators.max(99)]],
-      dirX: [0, Validators.required],
-      dirY: [1, Validators.required],
+      dirX:    [0,  Validators.required],
+      dirY:    [1,  Validators.required],
     });
-    this.startPolling();
+    this.pollShip();
+    this.pollTimer = setInterval(() => this.pollShip(), 2000);
   }
 
   ngOnDestroy() {
-    this.pollSub?.unsubscribe();
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.shipSub?.unsubscribe();
+    this.subSub?.unsubscribe();
   }
 
-  private startPolling() {
-    this.pollSub = interval(3000).pipe(
-      startWith(0),
-      switchMap(() => this.api.getShips())
-    ).subscribe({
+  private pollShip() {
+    this.shipSub?.unsubscribe();
+    this.shipSub = this.api.getShips().subscribe({
       next: ships => {
-        const active = ships.find(s => s.active);
+        const active = ships.find(s => s.active) ?? null;
+        this.ship = active;
         if (active) {
-          this.ship = active;
           this.loadSubmarines();
         } else {
-          this.ship = null;
           this.submarines = [];
         }
+        this.cdr.detectChanges();
       },
       error: () => {}
     });
   }
 
-  private loadSubmarines() {
+  loadSubmarines() {
     if (!this.ship) return;
-    this.api.getSubmarines(this.ship.name).subscribe({
-      next: subs => this.submarines = subs,
+    this.subSub?.unsubscribe();
+    this.subSub = this.api.getSubmarines(this.ship.name).subscribe({
+      next: subs => {
+        this.submarines = subs;
+        this.cdr.detectChanges();
+      },
       error: () => {}
     });
   }
@@ -87,25 +94,18 @@ export class ControlComponent implements OnInit, OnDestroy {
     this.loading = true;
     const v = this.launchForm.value;
     this.api.launchShip({
-      name: v.name,
-      sectorX: v.sectorX,
-      sectorY: v.sectorY,
-      dirX: v.dirX,
-      dirY: v.dirY,
+      name: v.name, sectorX: v.sectorX, sectorY: v.sectorY, dirX: v.dirX, dirY: v.dirY,
     }).subscribe({
       next: res => {
         this.loading = false;
         if (res.success) {
           this.ship = res.data!;
-          this.snack.open(`✅ Schiff "${res.data?.name}" gestartet!`, 'OK', { duration: 3000 });
+          this.snack.open(`Schiff "${res.data?.name}" gestartet!`, 'OK', { duration: 3000 });
         } else {
-          this.snack.open(`❌ ${res.error ?? res.message}`, 'OK', { duration: 4000 });
+          this.snack.open(res.error ?? res.message ?? 'Fehler', 'OK', { duration: 4000 });
         }
       },
-      error: err => {
-        this.loading = false;
-        this.snack.open(`❌ ${err.message}`, 'OK', { duration: 4000 });
-      }
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
     });
   }
 
@@ -117,15 +117,12 @@ export class ControlComponent implements OnInit, OnDestroy {
         this.loading = false;
         if (res.success) {
           this.ship = res.data!;
-          this.snack.open(`⚓ Bewegt → (${res.data?.currentX}, ${res.data?.currentY})`, 'OK', { duration: 2000 });
+          this.snack.open(`Bewegt nach (${res.data?.currentX}, ${res.data?.currentY})`, 'OK', { duration: 2000 });
         } else {
-          this.snack.open(`❌ ${res.error ?? res.message}`, 'OK', { duration: 4000 });
+          this.snack.open(res.error ?? res.message ?? 'Fehler', 'OK', { duration: 4000 });
         }
       },
-      error: err => {
-        this.loading = false;
-        this.snack.open(`❌ ${err.message}`, 'OK', { duration: 4000 });
-      }
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
     });
   }
 
@@ -136,15 +133,12 @@ export class ControlComponent implements OnInit, OnDestroy {
       next: res => {
         this.loading = false;
         if (res.success) {
-          this.snack.open(`🔍 Scan: Tiefe ${res.data?.averageDepth?.toFixed(1)}m, σ=${res.data?.stdDeviation?.toFixed(2)}`, 'OK', { duration: 3000 });
+          this.snack.open(`Scan: Tiefe ${res.data?.averageDepth?.toFixed(1)}m, Stab.=${res.data?.stdDeviation?.toFixed(2)}`, 'OK', { duration: 3000 });
         } else {
-          this.snack.open(`❌ ${res.error ?? res.message}`, 'OK', { duration: 4000 });
+          this.snack.open(res.error ?? res.message ?? 'Fehler', 'OK', { duration: 4000 });
         }
       },
-      error: err => {
-        this.loading = false;
-        this.snack.open(`❌ ${err.message}`, 'OK', { duration: 4000 });
-      }
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
     });
   }
 
@@ -153,16 +147,14 @@ export class ControlComponent implements OnInit, OnDestroy {
     if (!confirm(`Schiff "${this.ship.name}" wirklich beenden?`)) return;
     this.loading = true;
     this.api.exitShip(this.ship.name).subscribe({
-      next: res => {
+      next: () => {
         this.loading = false;
-        this.snack.open('🚢 Schiff beendet', 'OK', { duration: 3000 });
+        this.snack.open('Schiff beendet', 'OK', { duration: 3000 });
         this.ship = null;
         this.submarines = [];
+        this.cdr.detectChanges();
       },
-      error: err => {
-        this.loading = false;
-        this.snack.open(`❌ ${err.message}`, 'OK', { duration: 4000 });
-      }
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
     });
   }
 
@@ -173,16 +165,12 @@ export class ControlComponent implements OnInit, OnDestroy {
       next: res => {
         this.loading = false;
         if (res.success) {
-          this.snack.open(`🤿 Submarine gestartet!`, 'OK', { duration: 3000 });
-          this.loadSubmarines();
+          this.snack.open('Submarine gestartet - erscheint in der Liste sobald es sich verbunden hat', 'OK', { duration: 5000 });
         } else {
-          this.snack.open(`❌ ${res.error ?? res.message}`, 'OK', { duration: 4000 });
+          this.snack.open(res.error ?? res.message ?? 'Fehler', 'OK', { duration: 4000 });
         }
       },
-      error: err => {
-        this.loading = false;
-        this.snack.open(`❌ ${err.message}`, 'OK', { duration: 4000 });
-      }
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
     });
   }
 
@@ -192,23 +180,20 @@ export class ControlComponent implements OnInit, OnDestroy {
     this.api.exitSubmarine(sub.id).subscribe({
       next: () => {
         this.loading = false;
-        this.snack.open('🤿 Submarine eingezogen', 'OK', { duration: 3000 });
+        this.snack.open('Submarine eingezogen', 'OK', { duration: 3000 });
         this.loadSubmarines();
       },
-      error: err => {
-        this.loading = false;
-        this.snack.open(`❌ ${err.message}`, 'OK', { duration: 4000 });
-      }
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
     });
   }
 
   dirLabel(x: number | null, y: number | null): string {
-    if (x === null || y === null) return '–';
-    if (y > 0) return '⬆ Nord';
-    if (y < 0) return '⬇ Süd';
-    if (x > 0) return '➡ Ost';
-    if (x < 0) return '⬅ West';
-    return '•';
+    if (x === null || y === null) return '-';
+    if (y > 0) return 'Nord';
+    if (y < 0) return 'Sued';
+    if (x > 0) return 'Ost';
+    if (x < 0) return 'West';
+    return '-';
   }
 }
 

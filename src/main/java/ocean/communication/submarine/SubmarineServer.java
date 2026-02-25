@@ -133,6 +133,20 @@ public class SubmarineServer extends Thread {
     }
 
     /**
+     * Gibt die Submarine-IDs aller aktuell verbundenen Sessions zurueck.
+     *
+     * @return Set mit Submarine-IDs (OceanServer-IDs)
+     */
+    public java.util.Set<String> getActiveSubmarineIds() {
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (SubmarineSession s : activeSessions) {
+            String id = s.getSubmarineId();
+            if (id != null && !id.equals("unknown")) ids.add(id);
+        }
+        return ids;
+    }
+
+    /**
      * Gibt zurueck ob aktuell mindestens ein Submarine taucht.
      *
      * @return true wenn mindestens ein Submarine aktiv taucht

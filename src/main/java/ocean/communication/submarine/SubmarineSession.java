@@ -61,6 +61,15 @@ public class SubmarineSession extends Thread {
         this.onFinished = onFinished;
     }
 
+    /**
+     * Gibt die Submarine-ID zurueck (gesetzt nach dem ersten ready-Paket).
+     *
+     * @return Submarine-ID oder "unknown" vor dem ersten ready
+     */
+    public String getSubmarineId() {
+        return submarineId;
+    }
+
     public SubmarineSession(Socket socket, SubmarineRepository subRepo, long shipId) {
         this.socket  = socket;
         this.subRepo = subRepo;

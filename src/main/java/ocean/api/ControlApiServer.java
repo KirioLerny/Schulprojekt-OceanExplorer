@@ -308,7 +308,34 @@ public class ControlApiServer {
         String name = ctx.pathParam("name");
         Long shipId = shipRepo.getIdByName(name);
         if (shipId == null) { ctx.status(404).json(err("Schiff nicht gefunden")); return; }
-        ctx.json(subRepo.findByShip(shipId));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        java.util.Set<String> liveIds = new java.util.HashSet<>();
+        if (subServer != null) {
+            for (String subId : subServer.getActiveSubmarineIds()) {
+                liveIds.add(subId);
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id",     -1);
+                m.put("name",   subId);
+                m.put("shipId", shipId);
+                m.put("active", true);
+                result.add(m);
+            }
+        }
+
+        for (var sub : subRepo.findByShip(shipId)) {
+            if (!liveIds.contains(sub.name())) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id",     sub.id());
+                m.put("name",   sub.name());
+                m.put("shipId", sub.shipId());
+                m.put("active", sub.active());
+                result.add(m);
+            }
+        }
+
+        ctx.json(result);
     }
 
     private void handleGetAllScans(Context ctx) {
@@ -430,10 +457,12 @@ public class ControlApiServer {
 
     private void handleStatus(Context ctx) {
         Map<String, Object> status = new LinkedHashMap<>();
-        status.put("serverRunning",    true);
-        status.put("activeShip",       activeShipName);
-        status.put("subsLaunched",     launchedSubCount.get());
-        status.put("subServerRunning", subServer != null && subServer.isAlive());
+        status.put("serverRunning",      true);
+        status.put("activeShip",         activeShipName);
+        status.put("subsLaunched",       launchedSubCount.get());
+        status.put("subServerRunning",   subServer != null && subServer.isAlive());
+        status.put("activeSessions",     subServer != null ? subServer.getActiveSessionCount() : 0);
+        status.put("activeSubmarineIds", subServer != null ? subServer.getActiveSubmarineIds() : List.of());
         ctx.json(status);
     }
 

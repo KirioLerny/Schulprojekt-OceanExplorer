@@ -1,8 +1,7 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { OceanApiService } from '../../services/ocean-api.service';
 import { PhotoMeta } from '../../models/models';
-import { interval, Subscription } from 'rxjs';
-import { startWith, switchMap } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 @Component({
   standalone: false,
@@ -13,30 +12,39 @@ import { startWith, switchMap } from 'rxjs/operators';
 export class GalleryComponent implements OnInit, OnDestroy {
 
   photos: PhotoMeta[] = [];
-  loading = true;
+  loading = false;
   lightboxOpen = false;
   lightboxIndex = 0;
 
   filterSub = '';
-  private pollSub?: Subscription;
+  private pollTimer?: ReturnType<typeof setInterval>;
+  private loadingSub?: Subscription;
 
-  constructor(private api: OceanApiService) {}
+  constructor(private api: OceanApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
-    this.pollSub = interval(8000).pipe(
-      startWith(0),
-      switchMap(() => this.api.getPhotos())
-    ).subscribe({
-      next: photos => {
-        this.photos = photos;
-        this.loading = false;
-      },
-      error: () => { this.loading = false; }
-    });
+    this.load();
+    this.pollTimer = setInterval(() => this.load(), 8000);
   }
 
   ngOnDestroy() {
-    this.pollSub?.unsubscribe();
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.loadingSub?.unsubscribe();
+  }
+
+  private load() {
+    this.loadingSub?.unsubscribe();
+    this.loadingSub = this.api.getPhotos().subscribe({
+      next: photos => {
+        this.photos = photos;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   get filtered(): PhotoMeta[] {

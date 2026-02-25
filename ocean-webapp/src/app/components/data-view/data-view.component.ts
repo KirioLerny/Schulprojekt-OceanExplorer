@@ -1,9 +1,8 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { OceanApiService } from '../../services/ocean-api.service';
-import { ScanData, PositionData, MeasurementPoint } from '../../models/models';
+import { ScanData, MeasurementPoint } from '../../models/models';
 import { Chart, registerables } from 'chart.js';
-import { interval, Subscription } from 'rxjs';
-import { startWith, switchMap } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 Chart.register(...registerables);
 
@@ -13,52 +12,66 @@ Chart.register(...registerables);
   templateUrl: './data-view.component.html',
   styleUrls: ['./data-view.component.scss']
 })
-export class DataViewComponent implements OnInit, OnDestroy {
+export class DataViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
-  @ViewChild('depthChart', { static: false }) depthChartRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('heatmapCanvas', { static: false }) heatmapRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('depthChart',    { static: false }) depthChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('heatmapCanvas', { static: false }) heatmapRef!:    ElementRef<HTMLCanvasElement>;
 
-  scans: ScanData[] = [];
+  scans:        ScanData[]        = [];
   measurements: MeasurementPoint[] = [];
-  loading = true;
+  loading = false;
 
-  private pollSub?: Subscription;
+  private pollTimer?: ReturnType<typeof setInterval>;
+  private scanSub?:   Subscription;
+  private measSub?:   Subscription;
   private depthChart?: Chart;
-  private heatChart?: Chart;
+  private heatChart?:  Chart;
+  private chartsReady = false;
 
-  // Ocean grid 100x100
-  grid: number[][] = [];
+  grid:    number[][] = [];
   gridMin = 0;
   gridMax = 1;
 
   displayedColumns = ['x', 'y', 'averageDepth', 'stdDeviation', 'timestamp'];
 
-  constructor(private api: OceanApiService) {}
+  constructor(private api: OceanApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
-    this.pollSub = interval(5000).pipe(
-      startWith(0),
-      switchMap(() => this.api.getAllScans())
-    ).subscribe({
+    this.load();
+    this.pollTimer = setInterval(() => this.load(), 5000);
+  }
+
+  ngAfterViewInit() {
+    this.chartsReady = true;
+    if (this.scans.length > 0) this.renderCharts();
+  }
+
+  ngOnDestroy() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.scanSub?.unsubscribe();
+    this.measSub?.unsubscribe();
+    this.depthChart?.destroy();
+    this.heatChart?.destroy();
+  }
+
+  private load() {
+    this.scanSub?.unsubscribe();
+    this.scanSub = this.api.getAllScans().subscribe({
       next: scans => {
         this.scans = scans;
         this.loading = false;
         this.buildGrid();
-        setTimeout(() => this.renderCharts(), 100);
+        this.cdr.detectChanges();
+        if (this.chartsReady) this.renderCharts();
       },
-      error: () => { this.loading = false; }
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
 
-    this.api.getMeasurements().subscribe({
-      next: pts => this.measurements = pts,
+    this.measSub?.unsubscribe();
+    this.measSub = this.api.getMeasurements().subscribe({
+      next: pts => { this.measurements = pts; this.cdr.detectChanges(); },
       error: () => {}
     });
-  }
-
-  ngOnDestroy() {
-    this.pollSub?.unsubscribe();
-    this.depthChart?.destroy();
-    this.heatChart?.destroy();
   }
 
   private buildGrid() {
@@ -75,7 +88,7 @@ export class DataViewComponent implements OnInit, OnDestroy {
     this.gridMax = max === -Infinity ? 1 : max;
   }
 
-  private renderCharts() {
+  renderCharts() {
     this.renderDepthChart();
     this.renderHeatmap();
   }
@@ -83,12 +96,12 @@ export class DataViewComponent implements OnInit, OnDestroy {
   private renderDepthChart() {
     const canvas = this.depthChartRef?.nativeElement;
     if (!canvas || this.scans.length === 0) return;
-
     this.depthChart?.destroy();
+    this.depthChart = undefined;
 
-    const sorted = [...this.scans].sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    ).slice(-50);
+    const sorted = [...this.scans]
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .slice(-50);
 
     this.depthChart = new Chart(canvas, {
       type: 'line',
@@ -99,34 +112,21 @@ export class DataViewComponent implements OnInit, OnDestroy {
           data: sorted.map(s => s.averageDepth),
           borderColor: '#4fc3f7',
           backgroundColor: 'rgba(79,195,247,0.15)',
-          fill: true,
-          tension: 0.4,
-          pointRadius: 3,
+          fill: true, tension: 0.4, pointRadius: 3,
         }, {
           label: 'Std.-Abweichung',
           data: sorted.map(s => s.stdDeviation),
           borderColor: '#ff8a65',
           backgroundColor: 'rgba(255,138,101,0.1)',
-          fill: false,
-          tension: 0.4,
-          pointRadius: 2,
+          fill: false, tension: 0.4, pointRadius: 2,
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { labels: { color: '#e0f0ff' } }
-        },
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { labels: { color: '#e0f0ff' } } },
         scales: {
-          x: {
-            ticks: { color: '#8ab8d8', maxTicksLimit: 15 },
-            grid: { color: 'rgba(255,255,255,0.05)' }
-          },
-          y: {
-            ticks: { color: '#8ab8d8' },
-            grid: { color: 'rgba(255,255,255,0.05)' }
-          }
+          x: { ticks: { color: '#8ab8d8', maxTicksLimit: 15 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color: '#8ab8d8' },                    grid: { color: 'rgba(255,255,255,0.05)' } }
         }
       }
     });
@@ -135,10 +135,12 @@ export class DataViewComponent implements OnInit, OnDestroy {
   private renderHeatmap() {
     const canvas = this.heatmapRef?.nativeElement;
     if (!canvas || this.scans.length === 0) return;
-
     this.heatChart?.destroy();
+    this.heatChart = undefined;
 
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     const W = canvas.width  = 500;
     const H = canvas.height = 500;
     const cellW = W / 100;
@@ -148,13 +150,12 @@ export class DataViewComponent implements OnInit, OnDestroy {
     ctx.fillRect(0, 0, W, H);
 
     const range = this.gridMax - this.gridMin || 1;
-
     for (let y = 0; y < 100; y++) {
       for (let x = 0; x < 100; x++) {
         const val = this.grid[y][x];
         if (val < 0) continue;
         const t = (val - this.gridMin) / range;
-        const r = Math.round(0   + t * 30);
+        const r = Math.round(t * 30);
         const g = Math.round(60  + t * 100);
         const b = Math.round(120 + t * 135);
         ctx.fillStyle = `rgb(${r},${g},${b})`;
@@ -162,7 +163,6 @@ export class DataViewComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Grid lines
     ctx.strokeStyle = 'rgba(255,255,255,0.04)';
     ctx.lineWidth = 0.3;
     for (let i = 0; i <= 100; i += 10) {
@@ -171,23 +171,18 @@ export class DataViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  get scannedCount(): number {
-    return this.scans.length;
-  }
+  get scannedCount():     number { return this.scans.length; }
+  get measurementCount(): number { return this.measurements.length; }
 
   get avgDepth(): string {
-    if (!this.scans.length) return '–';
+    if (!this.scans.length) return '-';
     const avg = this.scans.reduce((s, c) => s + c.averageDepth, 0) / this.scans.length;
     return avg.toFixed(1) + ' m';
   }
 
   get maxDepth(): string {
-    if (!this.scans.length) return '–';
+    if (!this.scans.length) return '-';
     return Math.max(...this.scans.map(s => s.averageDepth)).toFixed(1) + ' m';
-  }
-
-  get measurementCount(): number {
-    return this.measurements.length;
   }
 }
 
