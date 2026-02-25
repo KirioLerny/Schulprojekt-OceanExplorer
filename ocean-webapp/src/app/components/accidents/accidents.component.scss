@@ -1,0 +1,122 @@
+.accidents-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: #0f2035;
+  border: 1px solid #1e3a5e;
+  text-align: center;
+
+  &.danger {
+    border-color: #ff5252;
+    background: #1a0f0f;
+  }
+
+  .stat-icon  { font-size: 2rem; margin-bottom: 4px; }
+  .stat-value { font-size: 1.6rem; font-weight: bold; color: #7ec8ff; }
+  .stat-label { font-size: 0.8rem; color: #8ab8d8; margin-top: 4px; }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #446a8c;
+
+  .empty-icon  { font-size: 4rem; margin-bottom: 12px; }
+  .empty-title { font-size: 1.3rem; color: #4fc3f7; margin: 0; }
+  .empty-sub   { font-size: 0.9rem; margin-top: 8px; }
+}
+
+.accident-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.accident-card {
+  background: #1a0f0f;
+  border: 1px solid #8b2020;
+  color: #f0d0d0;
+
+  .crash-icon {
+    color: #ff5252;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  mat-card-subtitle { color: #aa8080 !important; }
+}
+
+.info-grid {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-label {
+  font-size: 0.75rem;
+  color: #aa8080;
+}
+
+.info-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffcccc;
+}
+
+.description-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(255, 82, 82, 0.08);
+  border-left: 3px solid #ff5252;
+  padding: 10px 14px;
+  border-radius: 4px;
+  color: #f0c0c0;
+  font-size: 0.9rem;
+
+  .desc-icon { color: #ff8a80; font-size: 1.1rem; margin-top: 2px; }
+}
+
+.section-card {
+  background: #0f2035;
+  border: 1px solid #1e3a5e;
+  color: #e0f0ff;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.accident-table {
+  width: 100%;
+  background: transparent;
+
+  th { color: #ff8a80; font-weight: 600; }
+  td { color: #f0c0c0; }
+
+  .desc-cell { max-width: 300px; }
+}
+
+.accident-row:hover {
+  background: rgba(255, 82, 82, 0.06);
+}
+

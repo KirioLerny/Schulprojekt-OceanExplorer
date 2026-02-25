@@ -66,6 +66,16 @@ export interface MeasurementPoint {
   z: number;
 }
 
+export interface Accident {
+  id: number;
+  shipId:      number | null;
+  submarineId: number | null;
+  x: number;
+  y: number;
+  description: string;
+  timestamp: string | null;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

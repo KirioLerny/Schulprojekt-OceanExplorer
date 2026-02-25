@@ -100,11 +100,14 @@ public class ControlApiServer {
         javalin.get("/api/ships/{name}/scans",            this::handleGetShipScans);
         javalin.get("/api/ships/{name}/submarines",       this::handleGetShipSubmarines);
         javalin.get("/api/submarines/active",             this::handleGetActiveSubmarines);
+        javalin.get("/api/submarines/sessions",           this::handleGetSubmarineSessions);
+        javalin.post("/api/submarine/disconnect",         this::handleDisconnectSubmarine);
         javalin.get("/api/scans",                         this::handleGetAllScans);
         javalin.post("/api/submarine/launch",             this::handleLaunchSubmarine);
         javalin.post("/api/submarine/{id}/exit",          this::handleExitSubmarine);
         javalin.get("/api/submarines",                    this::handleGetAllSubmarines);
         javalin.get("/api/measurements",                  this::handleGetMeasurements);
+        javalin.get("/api/accidents",                     this::handleGetAccidents);
         javalin.get("/api/status",                        this::handleStatus);
         javalin.get("/api/photos",                        this::handleGetAllPhotos);
         javalin.get("/api/photos/{id}",                   this::handleGetPhotoImage);
@@ -326,15 +329,42 @@ public class ControlApiServer {
     }
 
     private void handleGetActiveSubmarines(Context ctx) {
-        ctx.json(buildSubmarineList(activeShipDbId > 0 ? activeShipDbId : null));
+        Long shipId = activeShipDbId > 0 ? activeShipDbId : null;
+        List<Map<String, Object>> list = buildSubmarineList(shipId);
+        logger.debug("getActiveSubmarines: subServer={}, shipDbId={}, result={}",
+                subServer != null ? "running=" + subServer.isRunning() : "null",
+                shipId, list.size());
+        ctx.json(list);
+    }
+
+    private void handleGetSubmarineSessions(Context ctx) {
+        if (subServer == null) {
+            ctx.json(List.of());
+            return;
+        }
+        ctx.json(subServer.getSessionInfos());
+    }
+
+    private void handleDisconnectSubmarine(Context ctx) {
+        JSONObject body;
+        try { body = new JSONObject(ctx.body()); } catch (Exception e) {
+            ctx.status(400).json(err("Ungültiger JSON-Body")); return;
+        }
+        String subId = body.optString("submarineId", "");
+        if (subId.isBlank()) { ctx.status(400).json(err("submarineId fehlt")); return; }
+        if (subServer == null) { ctx.json(err("Kein SubmarineServer aktiv")); return; }
+        boolean found = subServer.disconnectSubmarine(subId);
+        if (found) ctx.json(ok("Submarine " + subId + " getrennt"));
+        else       ctx.json(err("Submarine " + subId + " nicht gefunden"));
     }
 
     private List<Map<String, Object>> buildSubmarineList(Long shipId) {
         List<Map<String, Object>> result = new ArrayList<>();
-        java.util.Set<String> liveIds = new java.util.HashSet<>();
+        // Erst alle live Sessions aus SubmarineServer (auch "connecting-N")
+        java.util.Set<String> liveNames = new java.util.HashSet<>();
         if (subServer != null) {
             for (String subId : subServer.getActiveSubmarineIds()) {
-                liveIds.add(subId);
+                liveNames.add(subId);
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id",     -1);
                 m.put("name",   subId);
@@ -343,17 +373,26 @@ public class ControlApiServer {
                 result.add(m);
             }
         }
-        if (shipId != null && shipId > 0) {
-            for (var sub : subRepo.findByShip(shipId)) {
-                if (!liveIds.contains(sub.name())) {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id",     sub.id());
-                    m.put("name",   sub.name());
-                    m.put("shipId", sub.shipId());
-                    m.put("active", sub.active());
-                    result.add(m);
+        // Dann alle DB-Subs mit active=1 die noch nicht in live-Liste sind
+        // (deckt manuelle submarine.jar Starts und Server-Neustarts ab)
+        try {
+            List<?> dbSubs = (shipId != null && shipId > 0)
+                    ? subRepo.findByShip(shipId)
+                    : subRepo.findAllActive();
+            for (var sub : dbSubs) {
+                if (sub instanceof ocean.data.repository.SubmarineRepository.SubmarineInfo info) {
+                    if (!liveNames.contains(info.name())) {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("id",     info.id());
+                        m.put("name",   info.name());
+                        m.put("shipId", info.shipId());
+                        m.put("active", info.active());
+                        result.add(m);
+                    }
                 }
             }
+        } catch (Exception e) {
+            logger.warn("Fehler beim Laden der DB-Submarines: {}", e.getMessage());
         }
         return result;
     }
@@ -377,7 +416,7 @@ public class ControlApiServer {
         }
 
         synchronized (this) {
-            if (subServer == null || !subServer.isRunning()) {
+            if (subServer == null || (!subServer.isRunning() && !subServer.isAlive())) {
                 if (subServer != null) {
                     logger.warn("SubmarineServer war gestoppt - starte neu auf Port {}", SubmarineServer.DEFAULT_PORT);
                     try { subServer.shutdown(); } catch (Exception ignored) {}
@@ -386,8 +425,13 @@ public class ControlApiServer {
                 subServer = new SubmarineServer(subServerPort, subRepo, activeShipDbId, MAX_SUBMARINES);
                 subServer.start();
                 logger.info("SubmarineServer gestartet auf Port {}", subServerPort);
-                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                // Warte bis zu 2s bis der Server den Port gebunden hat
+                for (int i = 0; i < 20; i++) {
+                    try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                    if (subServer.isRunning()) break;
+                }
                 if (!subServer.isRunning()) {
+                    logger.error("SubmarineServer konnte Port {} nicht belegen!", subServerPort);
                     ctx.json(err("SubmarineServer konnte Port " + subServerPort + " nicht belegen - bereits belegt?"));
                     subServer = null;
                     return;
@@ -442,6 +486,14 @@ public class ControlApiServer {
     private void handleGetMeasurements(Context ctx) {
         try {
             ctx.json(subRepo.findAllMeasurements());
+        } catch (Exception e) {
+            ctx.status(500).json(err("DB-Fehler: " + e.getMessage()));
+        }
+    }
+
+    private void handleGetAccidents(Context ctx) {
+        try {
+            ctx.json(subRepo.findAllAccidents());
         } catch (Exception e) {
             ctx.status(500).json(err("DB-Fehler: " + e.getMessage()));
         }

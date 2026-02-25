@@ -17,11 +17,15 @@ export class ControlComponent implements OnInit, OnDestroy {
   loading = false;
   ship: Ship | null = null;
   submarines: Submarine[] = [];
+  sessions: {submarineId: string, pilotStep: number}[] = [];
   maxSubs = 4;
+
+  readonly PILOT_LABELS = ['⬇ Taucht ab', '📏 Messen', '📸 Foto', '⬆ Auftauchen', '✅ Aufgetaucht'];
 
   private pollTimer?: ReturnType<typeof setInterval>;
   private shipSub?:   Subscription;
   private subSub?:    Subscription;
+  private sessSub?:   Subscription;
 
   constructor(
     private fb: FormBuilder,
@@ -39,13 +43,19 @@ export class ControlComponent implements OnInit, OnDestroy {
       dirY:    [1,  Validators.required],
     });
     this.pollShip();
-    this.pollTimer = setInterval(() => this.pollShip(), 2000);
+    this.loadSubmarines();
+    // Ship-Poll und Sub-Poll laufen unabhängig voneinander
+    this.pollTimer = setInterval(() => {
+      this.pollShip();
+      this.loadSubmarines();
+    }, 2000);
   }
 
   ngOnDestroy() {
     if (this.pollTimer) clearInterval(this.pollTimer);
     this.shipSub?.unsubscribe();
     this.subSub?.unsubscribe();
+    this.sessSub?.unsubscribe();
   }
 
   private pollShip() {
@@ -54,8 +64,10 @@ export class ControlComponent implements OnInit, OnDestroy {
       next: ships => {
         const active = ships.find(s => s.active) ?? null;
         this.ship = active;
-        if (!active) this.submarines = [];
-        this.loadSubmarines();
+        // Nur leeren wenn KEIN Schiff mehr aktiv UND keine aktiven Subs laufen
+        if (!active && this.submarines.every(s => !s.active)) {
+          this.submarines = [];
+        }
         this.cdr.detectChanges();
       },
       error: () => {}
@@ -73,6 +85,32 @@ export class ControlComponent implements OnInit, OnDestroy {
       error: err => {
         console.error('[Submarines] fetch error:', err);
       }
+    });
+    this.sessSub?.unsubscribe();
+    this.sessSub = this.api.getSubmarineSessions().subscribe({
+      next: sess => { this.sessions = sess; this.cdr.detectChanges(); },
+      error: () => {}
+    });
+  }
+
+  sessionFor(subName: string): {submarineId: string, pilotStep: number} | undefined {
+    return this.sessions.find(s => s.submarineId === subName);
+  }
+
+  stepLabel(step: number): string {
+    return this.PILOT_LABELS[step] ?? `Schritt ${step}`;
+  }
+
+  disconnectByName(subName: string) {
+    if (!confirm(`Submarine "${subName}" wirklich abbrechen?`)) return;
+    this.loading = true;
+    this.api.disconnectSubmarine(subName).subscribe({
+      next: res => {
+        this.loading = false;
+        this.snack.open(res.success ? `${subName} getrennt` : (res.error ?? 'Fehler'), 'OK', { duration: 3000 });
+        this.loadSubmarines();
+      },
+      error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
     });
   }
 

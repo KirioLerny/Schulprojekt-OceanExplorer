@@ -140,7 +140,18 @@
           <mat-chip [color]="sub.active ? 'accent' : ''" [highlighted]="sub.active" class="sub-chip">
             {{ sub.active ? 'Taucht' : 'Fertig' }}
           </mat-chip>
-          <button mat-icon-button color="warn" *ngIf="sub.active"
+          <!-- Dive step progress for live subs -->
+          <span class="sub-step" *ngIf="sub.active && sessionFor(sub.name) as sess">
+            {{ stepLabel(sess.pilotStep) }}
+          </span>
+          <!-- Disconnect live sub -->
+          <button mat-icon-button color="warn" *ngIf="sub.active && sub.id === -1"
+                  (click)="disconnectByName(sub.name)" [disabled]="loading"
+                  matTooltip="Submarine abbrechen">
+            <mat-icon>cancel</mat-icon>
+          </button>
+          <!-- Exit DB sub -->
+          <button mat-icon-button color="warn" *ngIf="sub.active && sub.id !== -1"
                   (click)="exitSubmarine(sub)" [disabled]="loading"
                   matTooltip="Submarine einziehen">
             <mat-icon>eject</mat-icon>

@@ -1,0 +1,88 @@
+﻿<div class="sub-control-page">
+  <div class="page-header">
+    <h2>🤿 Submarine Steuerung</h2>
+    <p class="sub-count">{{ subs.length }} aktive Submarine</p>
+  </div>
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+  <div *ngIf="subs.length === 0" class="empty-state">
+    <div class="empty-icon">🚢</div>
+    <p>Keine aktiven Submarines.</p>
+    <p>Starte Submarines auf der <strong>Steuerung</strong>-Seite.</p>
+  </div>
+  <div class="sub-grid">
+    <mat-card *ngFor="let sub of subs" class="sub-card" [class.active]="sub.active">
+      <!-- Header -->
+      <mat-card-header>
+        <mat-card-title>
+          🤿 {{ sub.name }}
+        </mat-card-title>
+        <mat-card-subtitle>
+          <mat-chip [color]="sub.active ? 'accent' : 'warn'" [highlighted]="true" class="status-chip">
+            {{ sub.active ? 'Taucht' : 'Fertig' }}
+          </mat-chip>
+          <span class="sub-id" *ngIf="sub.id > 0">ID: {{ sub.id }}</span>
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <!-- Tauchgang-Fortschritt -->
+        <div class="dive-progress" *ngIf="sub.active">
+          <div class="step-header">
+            <span class="step-icon">{{ stepInfo(sub.pilotStep).icon }}</span>
+            <span class="step-label">{{ stepInfo(sub.pilotStep).label }}</span>
+            <span class="step-pct">{{ stepPercent(sub.pilotStep) }}%</span>
+          </div>
+          <mat-progress-bar
+            mode="determinate"
+            [value]="stepPercent(sub.pilotStep)"
+            color="accent"
+            class="dive-bar">
+          </mat-progress-bar>
+          <!-- Schritt-Anzeige -->
+          <div class="step-list">
+            <div *ngFor="let step of PILOT_STEPS; let i = index"
+                 class="step-item"
+                 [class.done]="i < sub.pilotStep"
+                 [class.current]="i === sub.pilotStep">
+              <span class="step-dot">{{ i < sub.pilotStep ? '✔' : (i === sub.pilotStep ? '▶' : '○') }}</span>
+              <span>{{ step.icon }} {{ step.label }}</span>
+            </div>
+          </div>
+        </div>
+        <!-- Fertig-Status -->
+        <div class="done-status" *ngIf="!sub.active">
+          <mat-icon color="accent">check_circle</mat-icon>
+          <span>Tauchgang abgeschlossen</span>
+        </div>
+        <!-- Fotos -->
+        <div class="photo-section" *ngIf="sub.showPhotos">
+          <div *ngIf="sub.photos.length === 0" class="no-photos">Noch keine Fotos vorhanden</div>
+          <div class="photo-row" *ngIf="sub.photos.length > 0">
+            <div *ngFor="let photo of sub.photos" class="photo-thumb-wrap">
+              <img [src]="photoUrl(photo.id)" class="photo-thumb" [alt]="'Foto ' + photo.id">
+              <div class="photo-pos">📍 ({{ photo.x }}, {{ photo.y }}, {{ photo.z }})</div>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+      <mat-card-actions>
+        <!-- Foto-Button -->
+        <button mat-raised-button color="accent"
+                (click)="togglePhotos(sub)"
+                [disabled]="loading">
+          <mat-icon>photo_camera</mat-icon>
+          {{ sub.showPhotos ? 'Fotos verstecken' : 'Fotos anzeigen' }}
+          <span *ngIf="sub.photos.length > 0"> ({{ sub.photos.length }})</span>
+        </button>
+        <!-- Abbruch-Button -->
+        <button mat-raised-button color="warn"
+                *ngIf="sub.active"
+                (click)="disconnect(sub)"
+                [disabled]="loading"
+                matTooltip="Tauchgang abbrechen">
+          <mat-icon>cancel</mat-icon>
+          Abbrechen
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+</div>

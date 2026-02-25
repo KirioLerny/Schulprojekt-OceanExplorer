@@ -222,6 +222,26 @@ public class SubmarineRepository {
     public record MeasurementInfo(int x, int y, int z) {}
 
     /**
+     * Gibt alle aktuell aktiven Submarines zurueck (active=1), unabhaengig vom Schiff.
+     */
+    public List<SubmarineInfo> findAllActive() {
+        var records = dsl.fetch(
+            "SELECT id, name, ship_id, active FROM submarine WHERE active = 1 ORDER BY id DESC"
+        );
+        List<SubmarineInfo> result = new ArrayList<>();
+        for (Record r : records) {
+            Integer activeVal = r.get(field("active", Integer.class));
+            result.add(new SubmarineInfo(
+                r.get(field("id", Long.class)),
+                r.get(field("name", String.class)),
+                r.get(field("ship_id", Long.class)),
+                activeVal != null && activeVal == 1
+            ));
+        }
+        return result;
+    }
+
+    /**
      * Gibt alle Submarines eines Schiffs zurueck.
      *
      * @param shipId DB-ID des Schiffs
@@ -282,6 +302,45 @@ public class SubmarineRepository {
                 r.get(field("x", Integer.class)),
                 r.get(field("y", Integer.class)),
                 r.get(field("z", Integer.class))
+            ));
+        }
+        return result;
+    }
+
+    /**
+     * DTO fuer Unfall-Eintraege.
+     */
+    public record AccidentInfo(
+            long id,
+            Long shipId,
+            Long submarineId,
+            int x,
+            int y,
+            String description,
+            String timestamp
+    ) {}
+
+    /**
+     * Gibt alle Unfaelle zurueck (neueste zuerst).
+     */
+    public List<AccidentInfo> findAllAccidents() {
+        var records = dsl.fetch(
+            "SELECT a.id, a.ship_id, a.submarine_id, a.x, a.y, a.description, a.timestamp, " +
+            "s.name AS sub_name " +
+            "FROM accident a " +
+            "LEFT JOIN submarine s ON s.id = a.submarine_id " +
+            "ORDER BY a.timestamp DESC"
+        );
+        List<AccidentInfo> result = new ArrayList<>();
+        for (Record r : records) {
+            result.add(new AccidentInfo(
+                r.get(field("id", Long.class)),
+                r.get(field("ship_id", Long.class)),
+                r.get(field("submarine_id", Long.class)),
+                r.get(field("x", Integer.class)),
+                r.get(field("y", Integer.class)),
+                r.get(field("description", String.class)),
+                r.get(field("timestamp")) != null ? r.get(field("timestamp")).toString() : null
             ));
         }
         return result;

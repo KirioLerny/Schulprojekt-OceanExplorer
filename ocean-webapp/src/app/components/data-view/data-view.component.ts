@@ -16,6 +16,7 @@ export class DataViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild('depthChart',    { static: false }) depthChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('heatmapCanvas', { static: false }) heatmapRef!:    ElementRef<HTMLCanvasElement>;
+  @ViewChild('scatter3d',     { static: false }) scatter3dRef!:  ElementRef<HTMLCanvasElement>;
 
   scans:        ScanData[]        = [];
   measurements: MeasurementPoint[] = [];
@@ -44,6 +45,7 @@ export class DataViewComponent implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.chartsReady = true;
     if (this.scans.length > 0) this.renderCharts();
+    if (this.measurements.length > 0) this.renderScatter();
   }
 
   ngOnDestroy() {
@@ -69,7 +71,11 @@ export class DataViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.measSub?.unsubscribe();
     this.measSub = this.api.getMeasurements().subscribe({
-      next: pts => { this.measurements = pts; this.cdr.detectChanges(); },
+      next: pts => {
+        this.measurements = pts;
+        this.cdr.detectChanges();
+        if (this.chartsReady) this.renderScatter();
+      },
       error: () => {}
     });
   }
@@ -169,6 +175,89 @@ export class DataViewComponent implements OnInit, AfterViewInit, OnDestroy {
       ctx.beginPath(); ctx.moveTo(i * cellW, 0); ctx.lineTo(i * cellW, H); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, i * cellH); ctx.lineTo(W, i * cellH); ctx.stroke();
     }
+  }
+
+  /** Renders the 3D measurement scatter as a 2D top-down canvas (X/Y pos, Z=color). */
+  renderScatter() {
+    const canvas = this.scatter3dRef?.nativeElement;
+    if (!canvas || this.measurements.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const W = canvas.width  = 500;
+    const H = canvas.height = 400;
+
+    ctx.fillStyle = '#071020';
+    ctx.fillRect(0, 0, W, H);
+
+    // Determine ranges
+    const xs = this.measurements.map(p => p.x);
+    const ys = this.measurements.map(p => p.y);
+    const zs = this.measurements.map(p => p.z);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs) || 1;
+    const yMin = Math.min(...ys), yMax = Math.max(...ys) || 1;
+    const zMin = Math.min(...zs), zMax = Math.max(...zs) || 1;
+    const xRange = xMax - xMin || 1;
+    const yRange = yMax - yMin || 1;
+    const zRange = zMax - zMin || 1;
+
+    const pad = 30;
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 5; i++) {
+      const gx = pad + (i / 5) * (W - 2 * pad);
+      const gy = pad + (i / 5) * (H - 2 * pad);
+      ctx.beginPath(); ctx.moveTo(gx, pad); ctx.lineTo(gx, H - pad); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pad, gy); ctx.lineTo(W - pad, gy); ctx.stroke();
+    }
+
+    // Axis labels
+    ctx.fillStyle = '#8ab8d8';
+    ctx.font = '11px monospace';
+    ctx.fillText(`X: ${xMin}`, pad, H - 8);
+    ctx.fillText(`${xMax}`, W - pad - 20, H - 8);
+    ctx.save();
+    ctx.translate(12, H - pad);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(`Y: ${yMin}..${yMax}`, 0, 0);
+    ctx.restore();
+
+    // Points
+    for (const p of this.measurements) {
+      const cx = pad + ((p.x - xMin) / xRange) * (W - 2 * pad);
+      const cy = H - pad - ((p.y - yMin) / yRange) * (H - 2 * pad);
+      const t  = (p.z - zMin) / zRange;
+      const r  = Math.round(79  + t * (255 - 79));
+      const g  = Math.round(195 - t * (195 - 138));
+      const b  = Math.round(247 - t * (247 - 101));
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fill();
+    }
+
+    // Title
+    ctx.fillStyle = '#e0f0ff';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(`${this.measurements.length} Punkte — Z: ${zMin}..${zMax}`, pad, 18);
+  }
+
+  /** Scrolls to the 3D section and re-renders the scatter. */
+  locateMeasurements() {
+    this.api.getMeasurements().subscribe({
+      next: pts => {
+        this.measurements = pts;
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.renderScatter();
+          document.getElementById('locate-section')?.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
+      },
+      error: () => {}
+    });
   }
 
   get scannedCount():     number { return this.scans.length; }

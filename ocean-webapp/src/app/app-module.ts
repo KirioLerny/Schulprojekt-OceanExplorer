@@ -26,6 +26,8 @@ import { App } from './app';
 import { ControlComponent } from './components/control/control.component';
 import { DataViewComponent } from './components/data-view/data-view.component';
 import { GalleryComponent } from './components/gallery/gallery.component';
+import { SubmarineControlComponent } from './components/submarine-control/submarine-control.component';
+import { AccidentsComponent } from './components/accidents/accidents.component';
 
 @NgModule({
   declarations: [
@@ -33,6 +35,8 @@ import { GalleryComponent } from './components/gallery/gallery.component';
     ControlComponent,
     DataViewComponent,
     GalleryComponent,
+    SubmarineControlComponent,
+    AccidentsComponent,
   ],
   imports: [
     BrowserModule,

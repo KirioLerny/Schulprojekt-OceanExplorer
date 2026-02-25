@@ -95,3 +95,32 @@
   font-style: italic;
 }
 
+.scatter-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.scatter-canvas {
+  border: 1px solid #1e3a5e;
+  border-radius: 4px;
+  max-width: 100%;
+  background: #071020;
+}
+
+.scatter-legend {
+  font-size: 0.8rem;
+  color: #8ab8d8;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.scatter-info {
+  color: #446a8c;
+  font-style: italic;
+}
+

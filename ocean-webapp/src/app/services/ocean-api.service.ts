@@ -5,7 +5,7 @@ import { catchError } from 'rxjs/operators';
 import {
   Ship, LaunchShipRequest, NavigateRequest,
   ScanData, PositionData, Submarine, PhotoMeta,
-  MeasurementPoint, ApiResponse
+  MeasurementPoint, ApiResponse, Accident
 } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
@@ -81,6 +81,16 @@ export class OceanApiService {
       .pipe(catchError(this.handleError));
   }
 
+  getSubmarineSessions(): Observable<{submarineId: string, pilotStep: number}[]> {
+    return this.http.get<{submarineId: string, pilotStep: number}[]>(`${this.BASE}/api/submarines/sessions`)
+      .pipe(catchError(this.handleError));
+  }
+
+  disconnectSubmarine(submarineId: string): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${this.BASE}/api/submarine/disconnect`, { submarineId })
+      .pipe(catchError(this.handleError));
+  }
+
   getAllSubmarines(): Observable<Submarine[]> {
     return this.http.get<Submarine[]>(`${this.BASE}/api/submarines`)
       .pipe(catchError(this.handleError));
@@ -88,6 +98,11 @@ export class OceanApiService {
 
   getMeasurements(): Observable<MeasurementPoint[]> {
     return this.http.get<MeasurementPoint[]>(`${this.BASE}/api/measurements`)
+      .pipe(catchError(this.handleError));
+  }
+
+  getAccidents(): Observable<Accident[]> {
+    return this.http.get<Accident[]>(`${this.BASE}/api/accidents`)
       .pipe(catchError(this.handleError));
   }
 

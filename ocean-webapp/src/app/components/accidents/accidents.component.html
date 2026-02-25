@@ -1,0 +1,112 @@
+<div class="accidents-page">
+
+  <!-- Header Stats -->
+  <div class="stats-row">
+    <mat-card class="stat-card" [class.danger]="accidents.length > 0">
+      <mat-card-content>
+        <div class="stat-icon">💥</div>
+        <div class="stat-value" [style.color]="accidents.length > 0 ? '#ff5252' : '#4fc3f7'">
+          {{ accidents.length }}
+        </div>
+        <div class="stat-label">Unfälle gesamt</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">🤿</div>
+        <div class="stat-value">{{ uniqueSubs }}</div>
+        <div class="stat-label">Betroffene Submarines</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">🕐</div>
+        <div class="stat-value">{{ lastAccidentTime }}</div>
+        <div class="stat-label">Letzter Unfall</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && accidents.length === 0" class="empty-state">
+    <div class="empty-icon">✅</div>
+    <p class="empty-title">Keine Unfälle aufgezeichnet</p>
+    <p class="empty-sub">Alle Submarines sind sicher unterwegs.</p>
+  </div>
+
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
+  <!-- Accident Cards -->
+  <div *ngIf="accidents.length > 0" class="accident-list">
+    <mat-card *ngFor="let a of accidents" class="accident-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon class="crash-icon">warning</mat-icon>
+          Unfall #{{ a.id }}
+        </mat-card-title>
+        <mat-card-subtitle>{{ a.timestamp ?? 'Unbekannte Zeit' }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">📍 Position</span>
+            <span class="info-value">({{ a.x }}, {{ a.y }})</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">🤿 Submarine ID</span>
+            <span class="info-value">{{ a.submarineId ?? '-' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">🚢 Schiff ID</span>
+            <span class="info-value">{{ a.shipId ?? '-' }}</span>
+          </div>
+        </div>
+        <div class="description-box">
+          <mat-icon class="desc-icon">info</mat-icon>
+          <span>{{ a.description }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Table (kompakte Ansicht) -->
+  <mat-card class="section-card" *ngIf="accidents.length > 0">
+    <mat-card-header>
+      <mat-card-title>📋 Unfall-Protokoll</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="accidents" class="accident-table">
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let a">{{ a.id }}</td>
+          </ng-container>
+          <ng-container matColumnDef="submarineId">
+            <th mat-header-cell *matHeaderCellDef>Sub-ID</th>
+            <td mat-cell *matCellDef="let a">{{ a.submarineId ?? '-' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="x">
+            <th mat-header-cell *matHeaderCellDef>X</th>
+            <td mat-cell *matCellDef="let a">{{ a.x }}</td>
+          </ng-container>
+          <ng-container matColumnDef="y">
+            <th mat-header-cell *matHeaderCellDef>Y</th>
+            <td mat-cell *matCellDef="let a">{{ a.y }}</td>
+          </ng-container>
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>Beschreibung</th>
+            <td mat-cell *matCellDef="let a" class="desc-cell">{{ a.description }}</td>
+          </ng-container>
+          <ng-container matColumnDef="timestamp">
+            <th mat-header-cell *matHeaderCellDef>Zeitstempel</th>
+            <td mat-cell *matCellDef="let a">{{ a.timestamp ?? '-' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="accident-row"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+</div>
+

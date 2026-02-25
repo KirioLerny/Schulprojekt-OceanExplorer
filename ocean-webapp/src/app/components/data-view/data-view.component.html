@@ -108,5 +108,31 @@
     </mat-card-content>
   </mat-card>
 
+  <!-- ── 3D Messpunkte ──────────────────────────────────────────────────── -->
+  <mat-card class="section-card" id="locate-section">
+    <mat-card-header>
+      <mat-card-title>📍 3D-Messpunkte</mat-card-title>
+      <mat-card-subtitle>{{ measurementCount }} Punkte gesammelt</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="measurements.length === 0" class="empty-hint">
+        Noch keine 3D-Messpunkte. Starte Submarines um Messungen durchzuführen.
+      </div>
+      <div *ngIf="measurements.length > 0" class="scatter-wrapper">
+        <canvas #scatter3d width="500" height="400" class="scatter-canvas"></canvas>
+        <div class="scatter-legend">
+          <span style="color:#4fc3f7">■</span> Flach &nbsp;
+          <span style="color:#ff8a65">■</span> Tief &nbsp;
+          <span class="scatter-info">X/Y = Position, Farbe = Tiefe (Z)</span>
+        </div>
+      </div>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="accent" (click)="locateMeasurements()">
+        <mat-icon>place</mat-icon> Locate
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
 </div>
 

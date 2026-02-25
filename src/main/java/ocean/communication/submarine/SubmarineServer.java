@@ -149,6 +149,42 @@ public class SubmarineServer extends Thread {
     }
 
     /**
+     * Gibt eine Liste mit Status-Infos (id, step) aller aktiven Sessions zurueck.
+     */
+    public java.util.List<java.util.Map<String, Object>> getSessionInfos() {
+        java.util.List<java.util.Map<String, Object>> list = new java.util.ArrayList<>();
+        int unknown = 0;
+        for (SubmarineSession s : activeSessions) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            String id = s.getSubmarineId();
+            if (id == null || id.equals("unknown")) {
+                unknown++;
+                id = "connecting-" + unknown;
+            }
+            m.put("submarineId", id);
+            m.put("pilotStep",   s.getPilotStep());
+            list.add(m);
+        }
+        return list;
+    }
+
+    /**
+     * Trennt ein Submarine nach ID (Force-Exit).
+     *
+     * @param submarineId ID des Submarines
+     * @return true wenn gefunden und getrennt
+     */
+    public boolean disconnectSubmarine(String submarineId) {
+        for (SubmarineSession s : activeSessions) {
+            if (submarineId.equals(s.getSubmarineId())) {
+                s.disconnect();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Gibt zurueck ob aktuell mindestens ein Submarine taucht.
      *
      * @return true wenn mindestens ein Submarine aktiv taucht

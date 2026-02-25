@@ -70,6 +70,20 @@ public class SubmarineSession extends Thread {
         return submarineId;
     }
 
+    /**
+     * Gibt den aktuellen Pilot-Schritt zurueck (0-4).
+     */
+    public int getPilotStep() {
+        return pilotStep;
+    }
+
+    /**
+     * Trennt die Verbindung zum Submarine (Force-Exit).
+     */
+    public void disconnect() {
+        closeQuietly();
+    }
+
     public SubmarineSession(Socket socket, SubmarineRepository subRepo, long shipId) {
         this.socket  = socket;
         this.subRepo = subRepo;
