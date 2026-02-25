@@ -99,6 +99,7 @@ public class ControlApiServer {
         javalin.get("/api/ships/{name}/positions",        this::handleGetPositions);
         javalin.get("/api/ships/{name}/scans",            this::handleGetShipScans);
         javalin.get("/api/ships/{name}/submarines",       this::handleGetShipSubmarines);
+        javalin.get("/api/submarines/active",             this::handleGetActiveSubmarines);
         javalin.get("/api/scans",                         this::handleGetAllScans);
         javalin.post("/api/submarine/launch",             this::handleLaunchSubmarine);
         javalin.post("/api/submarine/{id}/exit",          this::handleExitSubmarine);
@@ -255,8 +256,12 @@ public class ControlApiServer {
             return;
         }
         try {
-            activeClient.disconnect();
+            if (activeShipName != null) {
+                shipRepo.deactivate(activeShipName);
+            }
         } catch (Exception ignored) {}
+
+        try { activeClient.disconnect(); } catch (Exception ignored) {}
 
         if (subServer != null) {
             try { subServer.shutdown(); } catch (Exception ignored) {}
@@ -306,11 +311,26 @@ public class ControlApiServer {
 
     private void handleGetShipSubmarines(Context ctx) {
         String name = ctx.pathParam("name");
-        Long shipId = shipRepo.getIdByName(name);
-        if (shipId == null) { ctx.status(404).json(err("Schiff nicht gefunden")); return; }
+        try {
+            Long shipId = shipRepo.getIdByName(name);
+            if (shipId == null) {
+                logger.warn("handleGetShipSubmarines: Schiff '{}' nicht in DB", name);
+                ctx.json(buildSubmarineList(activeShipDbId > 0 ? activeShipDbId : null));
+                return;
+            }
+            ctx.json(buildSubmarineList(shipId));
+        } catch (Exception e) {
+            logger.error("handleGetShipSubmarines Fehler: {}", e.getMessage(), e);
+            ctx.status(500).json(err("Fehler: " + e.getMessage()));
+        }
+    }
 
+    private void handleGetActiveSubmarines(Context ctx) {
+        ctx.json(buildSubmarineList(activeShipDbId > 0 ? activeShipDbId : null));
+    }
+
+    private List<Map<String, Object>> buildSubmarineList(Long shipId) {
         List<Map<String, Object>> result = new ArrayList<>();
-
         java.util.Set<String> liveIds = new java.util.HashSet<>();
         if (subServer != null) {
             for (String subId : subServer.getActiveSubmarineIds()) {
@@ -318,24 +338,24 @@ public class ControlApiServer {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id",     -1);
                 m.put("name",   subId);
-                m.put("shipId", shipId);
+                m.put("shipId", shipId != null ? shipId : -1);
                 m.put("active", true);
                 result.add(m);
             }
         }
-
-        for (var sub : subRepo.findByShip(shipId)) {
-            if (!liveIds.contains(sub.name())) {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("id",     sub.id());
-                m.put("name",   sub.name());
-                m.put("shipId", sub.shipId());
-                m.put("active", sub.active());
-                result.add(m);
+        if (shipId != null && shipId > 0) {
+            for (var sub : subRepo.findByShip(shipId)) {
+                if (!liveIds.contains(sub.name())) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id",     sub.id());
+                    m.put("name",   sub.name());
+                    m.put("shipId", sub.shipId());
+                    m.put("active", sub.active());
+                    result.add(m);
+                }
             }
         }
-
-        ctx.json(result);
+        return result;
     }
 
     private void handleGetAllScans(Context ctx) {
@@ -357,12 +377,21 @@ public class ControlApiServer {
         }
 
         synchronized (this) {
-            if (subServer == null || !subServer.isAlive()) {
+            if (subServer == null || !subServer.isRunning()) {
+                if (subServer != null) {
+                    logger.warn("SubmarineServer war gestoppt - starte neu auf Port {}", SubmarineServer.DEFAULT_PORT);
+                    try { subServer.shutdown(); } catch (Exception ignored) {}
+                }
                 subServerPort = SubmarineServer.DEFAULT_PORT;
                 subServer = new SubmarineServer(subServerPort, subRepo, activeShipDbId, MAX_SUBMARINES);
                 subServer.start();
                 logger.info("SubmarineServer gestartet auf Port {}", subServerPort);
-                try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                if (!subServer.isRunning()) {
+                    ctx.json(err("SubmarineServer konnte Port " + subServerPort + " nicht belegen - bereits belegt?"));
+                    subServer = null;
+                    return;
+                }
             }
         }
 

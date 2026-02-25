@@ -76,6 +76,11 @@ export class OceanApiService {
       .pipe(catchError(this.handleError));
   }
 
+  getActiveSubmarines(): Observable<Submarine[]> {
+    return this.http.get<Submarine[]>(`${this.BASE}/api/submarines/active`)
+      .pipe(catchError(this.handleError));
+  }
+
   getAllSubmarines(): Observable<Submarine[]> {
     return this.http.get<Submarine[]>(`${this.BASE}/api/submarines`)
       .pipe(catchError(this.handleError));

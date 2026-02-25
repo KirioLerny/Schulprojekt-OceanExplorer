@@ -54,11 +54,8 @@ export class ControlComponent implements OnInit, OnDestroy {
       next: ships => {
         const active = ships.find(s => s.active) ?? null;
         this.ship = active;
-        if (active) {
-          this.loadSubmarines();
-        } else {
-          this.submarines = [];
-        }
+        if (!active) this.submarines = [];
+        this.loadSubmarines();
         this.cdr.detectChanges();
       },
       error: () => {}
@@ -66,14 +63,16 @@ export class ControlComponent implements OnInit, OnDestroy {
   }
 
   loadSubmarines() {
-    if (!this.ship) return;
     this.subSub?.unsubscribe();
-    this.subSub = this.api.getSubmarines(this.ship.name).subscribe({
+    this.subSub = this.api.getActiveSubmarines().subscribe({
       next: subs => {
+        console.log('[Submarines] received:', subs);
         this.submarines = subs;
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: err => {
+        console.error('[Submarines] fetch error:', err);
+      }
     });
   }
 
@@ -166,12 +165,23 @@ export class ControlComponent implements OnInit, OnDestroy {
         this.loading = false;
         if (res.success) {
           this.snack.open('Submarine gestartet - erscheint in der Liste sobald es sich verbunden hat', 'OK', { duration: 5000 });
+          this.startRapidPoll();
         } else {
           this.snack.open(res.error ?? res.message ?? 'Fehler', 'OK', { duration: 4000 });
         }
       },
       error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }
     });
+  }
+
+  /** Polls every 500 ms for up to 15 s after a submarine launch to catch the connecting phase. */
+  private startRapidPoll() {
+    let elapsed = 0;
+    const rapid = setInterval(() => {
+      this.loadSubmarines();
+      elapsed += 500;
+      if (elapsed >= 15000) clearInterval(rapid);
+    }, 500);
   }
 
   exitSubmarine(sub: Submarine) {

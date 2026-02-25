@@ -50,7 +50,8 @@ public class ShipRepository {
                         field("current_x"),
                         field("current_y"),
                         field("direction_x"),
-                        field("direction_y")
+                        field("direction_y"),
+                        field("active")
                 )
                 .values(
                         ship.getName(),
@@ -58,7 +59,8 @@ public class ShipRepository {
                         pos != null ? pos.getX() : null,
                         pos != null ? pos.getY() : null,
                         dir != null ? dir.getX() : null,
-                        dir != null ? dir.getY() : null
+                        dir != null ? dir.getY() : null,
+                        1
                 )
                 .execute();
 
@@ -117,6 +119,19 @@ public class ShipRepository {
         }
 
         return mapToShip(record);
+    }
+
+    /**
+     * Markiert ein Schiff als inaktiv.
+     *
+     * @param shipName Name des Schiffs
+     */
+    public void deactivate(String shipName) {
+        dsl.update(table("ship"))
+                .set(field("active"), 0)
+                .where(field("name").eq(shipName))
+                .execute();
+        logger.debug("Schiff {} deaktiviert", shipName);
     }
 
     /**

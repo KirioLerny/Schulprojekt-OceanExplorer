@@ -73,26 +73,21 @@ public class SubmarineServer extends Thread {
         try {
             serverSocket = new ServerSocket(port);
             running = true;
-            logger.info("SubmarineServer gestartet auf Port {} (max. {} Submarines)", port, maxSessions);
+            logger.info("SubmarineServer gestartet auf Port {}", port);
 
             while (running) {
                 try {
                     Socket client = serverSocket.accept();
                     int count = acceptedCount.incrementAndGet();
-                    logger.info("Neue Submarine-Verbindung von: {} (#{} von {})",
-                            client.getRemoteSocketAddress(), count, maxSessions);
+                    logger.info("Neue Submarine-Verbindung #{} von: {}",
+                            count, client.getRemoteSocketAddress());
                     SubmarineSession session = new SubmarineSession(client, subRepo, shipId);
                     activeSessions.add(session);
                     session.setOnFinished(() -> activeSessions.remove(session));
                     session.start();
-
-                    if (count >= maxSessions) {
-                        logger.info("Maximale Submarine-Anzahl ({}) erreicht - schliesse Accept-Loop", maxSessions);
-                        break;
-                    }
                 } catch (IOException e) {
                     if (running) {
-                        logger.warn("Fehler beim Akzeptieren einer Submarine-Verbindung: {}", e.getMessage());
+                        logger.warn("Fehler beim Akzeptieren: {}", e.getMessage());
                     }
                 }
             }
@@ -134,14 +129,21 @@ public class SubmarineServer extends Thread {
 
     /**
      * Gibt die Submarine-IDs aller aktuell verbundenen Sessions zurueck.
+     * Sessions die noch kein ready gesendet haben werden als "connecting-N" bezeichnet.
      *
-     * @return Set mit Submarine-IDs (OceanServer-IDs)
+     * @return Set mit Submarine-IDs
      */
     public java.util.Set<String> getActiveSubmarineIds() {
         java.util.Set<String> ids = new java.util.HashSet<>();
+        int unknown = 0;
         for (SubmarineSession s : activeSessions) {
             String id = s.getSubmarineId();
-            if (id != null && !id.equals("unknown")) ids.add(id);
+            if (id != null && !id.equals("unknown")) {
+                ids.add(id);
+            } else {
+                unknown++;
+                ids.add("connecting-" + unknown);
+            }
         }
         return ids;
     }
