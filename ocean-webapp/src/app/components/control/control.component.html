@@ -1,5 +1,6 @@
 <div class="control-page">
 
+
   <!-- ── Launch Ship ───────────────────────────────────────────────────── -->
   <mat-card class="section-card" *ngIf="!ship">
     <mat-card-header>
@@ -144,17 +145,11 @@
           <span class="sub-step" *ngIf="sub.active && sessionFor(sub.name) as sess">
             {{ stepLabel(sess.pilotStep) }}
           </span>
-          <!-- Disconnect live sub -->
-          <button mat-icon-button color="warn" *ngIf="sub.active && sub.id === -1"
-                  (click)="disconnectByName(sub.name)" [disabled]="loading"
-                  matTooltip="Submarine abbrechen">
-            <mat-icon>cancel</mat-icon>
-          </button>
-          <!-- Exit DB sub -->
-          <button mat-icon-button color="warn" *ngIf="sub.active && sub.id !== -1"
-                  (click)="exitSubmarine(sub)" [disabled]="loading"
-                  matTooltip="Submarine einziehen">
-            <mat-icon>eject</mat-icon>
+          <!-- Arise: sauber einziehen (Submarine-App beendet sich automatisch) -->
+          <button mat-icon-button color="warn" *ngIf="sub.active"
+                  (click)="ariseByName(sub.name)" [disabled]="loading"
+                  matTooltip="Submarine einziehen (arise)">
+            <mat-icon>vertical_align_top</mat-icon>
           </button>
         </div>
         <div *ngIf="submarines.length === 0" class="empty-subs">

@@ -3,13 +3,11 @@ import { RouterModule, Routes } from '@angular/router';
 import { ControlComponent } from './components/control/control.component';
 import { DataViewComponent } from './components/data-view/data-view.component';
 import { GalleryComponent } from './components/gallery/gallery.component';
-import { SubmarineControlComponent } from './components/submarine-control/submarine-control.component';
 import { AccidentsComponent } from './components/accidents/accidents.component';
 
 const routes: Routes = [
   { path: '',          redirectTo: 'control', pathMatch: 'full' },
   { path: 'control',   component: ControlComponent },
-  { path: 'submarines', component: SubmarineControlComponent },
   { path: 'data',      component: DataViewComponent },
   { path: 'gallery',   component: GalleryComponent },
   { path: 'accidents', component: AccidentsComponent },

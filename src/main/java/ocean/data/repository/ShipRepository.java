@@ -33,6 +33,8 @@ public class ShipRepository {
 
     /**
      * Speichert ein neues Schiff in der Datenbank.
+     * Existiert bereits ein Schiff mit diesem Namen (z.B. aus einem frueheren Lauf),
+     * wird es reaktiviert und die Position aktualisiert.
      *
      * @param ship Zu speicherndes Schiff
      * @return ID des gespeicherten Schiffs
@@ -43,26 +45,21 @@ public class ShipRepository {
         Vec2D pos = ship.getPosition();
         Vec2D dir = ship.getDirection();
 
-        dsl.insertInto(table("ship"))
-                .columns(
-                        field("name"),
-                        field("vehicle_type"),
-                        field("current_x"),
-                        field("current_y"),
-                        field("direction_x"),
-                        field("direction_y"),
-                        field("active")
-                )
-                .values(
-                        ship.getName(),
-                        VehicleType.ship.name(),
-                        pos != null ? pos.getX() : null,
-                        pos != null ? pos.getY() : null,
-                        dir != null ? dir.getX() : null,
-                        dir != null ? dir.getY() : null,
-                        1
-                )
-                .execute();
+        int posX = pos != null ? pos.getX() : 0;
+        int posY = pos != null ? pos.getY() : 0;
+        int dirX = dir != null ? dir.getX() : 0;
+        int dirY = dir != null ? dir.getY() : 1;
+
+        // ON DUPLICATE KEY UPDATE: reaktiviert ein bereits vorhandenes Schiff
+        dsl.execute(
+            "INSERT INTO ship (name, vehicle_type, current_x, current_y, direction_x, direction_y, active) " +
+            "VALUES (?, ?, ?, ?, ?, ?, 1) " +
+            "ON DUPLICATE KEY UPDATE " +
+            "  current_x = VALUES(current_x), current_y = VALUES(current_y), " +
+            "  direction_x = VALUES(direction_x), direction_y = VALUES(direction_y), " +
+            "  active = 1",
+            ship.getName(), VehicleType.ship.name(), posX, posY, dirX, dirY
+        );
 
         Record idRecord = dsl.select(field("id"))
                 .from(table("ship"))
@@ -70,10 +67,10 @@ public class ShipRepository {
                 .fetchOne();
 
         if (idRecord == null) {
-            throw new RuntimeException("Schiff konnte nicht gespeichert werden - SELECT nach INSERT lieferte kein Ergebnis");
+            throw new RuntimeException("Schiff konnte nicht gespeichert werden");
         }
         long id = idRecord.get(field("id", Long.class));
-        logger.info("Schiff gespeichert: {} (ID: {})", ship.getName(), id);
+        logger.info("Schiff gespeichert/reaktiviert: {} (ID: {})", ship.getName(), id);
         return id;
     }
 
@@ -127,11 +124,16 @@ public class ShipRepository {
      * @param shipName Name des Schiffs
      */
     public void deactivate(String shipName) {
+        // Erst alle offenen Submarines dieses Schiffs deaktivieren
+        dsl.execute(
+            "UPDATE submarine SET active = 0 WHERE ship_id = (SELECT id FROM ship WHERE name = ?) AND active = 1",
+            shipName
+        );
         dsl.update(table("ship"))
                 .set(field("active"), 0)
                 .where(field("name").eq(shipName))
                 .execute();
-        logger.debug("Schiff {} deaktiviert", shipName);
+        logger.debug("Schiff {} und alle zugehoerigen Submarines deaktiviert", shipName);
     }
 
     /**

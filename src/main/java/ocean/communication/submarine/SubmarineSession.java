@@ -268,10 +268,28 @@ public class SubmarineSession extends Thread {
     }
 
     /**
-     * Submarine aufgetaucht - Tauchgang als SURFACED beenden.
+     * Submarine aufgetaucht (arise) - Tauchgang als SURFACED beenden und Session sauber schliessen.
+     *
+     * <pre>
+     * Das Protokoll sieht vor:
+     *   C => Srv Arise: Submarine ist wieder aufgetaucht und wird vom Schiff aufgenommen.
+     *   Die Submarine-Anwendung beendet sich danach automatisch.
+     * Wir schliessen die Socket-Verbindung sauber, damit der Prozess wirklich endet.
+     * </pre>
      */
-    private void handleArise(@SuppressWarnings("unused") JSONObject json) {
-        logger.info("Submarine {} aufgetaucht", submarineId);
+    private void handleArise(JSONObject json) {
+        logger.info("Submarine {} aufgetaucht (arise) - beende Session sauber", submarineId);
+
+        // Arise-Position loggen (optional)
+        if (json.has("arisePos")) {
+            try {
+                JSONArray vec = json.getJSONObject("arisePos").getJSONArray("vec");
+                logger.info("  arise-Position: ({},{},{})", vec.getInt(0), vec.getInt(1), vec.getInt(2));
+            } catch (Exception e) {
+                logger.debug("Konnte arisePos nicht lesen: {}", e.getMessage());
+            }
+        }
+
         if (diveId >= 0) {
             subRepo.endDive(diveId, "SURFACED");
             diveId = -1;
@@ -280,6 +298,34 @@ public class SubmarineSession extends Thread {
             subRepo.deactivateSubmarine(submarineDbId);
             submarineDbId = -1;
         }
+
+        // Verbindung sauber schliessen - Submarine-App beendet sich dann automatisch
+        closeQuietly();
+    }
+
+    /**
+     * Schickt dem Submarine den Pilot-Befehl UP+arise, damit es auftaucht und sich sauber beendet.
+     * Wird aufgerufen wenn der Nutzer "Einziehen" klickt.
+     *
+     * <pre>
+     * Ablauf:
+     *   ShipApp sendet: { "cmd":"pilot", "route":"UP", "action":"arise" }
+     *   Submarine fuehrt UP-Route aus, sendet dann: { "cmd":"arise", ... }
+     *   handleArise() schliesst die Session sauber.
+     *
+     * WICHTIG: Wir senden einen pilot-Befehl, NICHT einen arise-Befehl.
+     * "arise" ist ein Ereignis das das Submarine an uns schickt.
+     * </pre>
+     */
+    public void sendAriseAndClose() {
+        logger.info("Sende Pilot UP+arise an Submarine {} (Einziehen)", submarineId);
+        // Pilot-Schritt direkt auf letzten Schritt setzen, damit handleReady nicht noch
+        // einen weiteren Schritt sendet falls das Submarine noch ein ready schickt
+        pilotStep = PILOT_STEPS.length;
+        sendPilot("UP", "arise");
+        // DB-Cleanup passiert in handleArise wenn das Submarine antwortet.
+        // Sicherheits-Timeout: closeQuietly wird nicht sofort aufgerufen –
+        // das Submarine beendet sich von selbst nach dem arise.
     }
 
     private void sendPilot(String route, String action) {

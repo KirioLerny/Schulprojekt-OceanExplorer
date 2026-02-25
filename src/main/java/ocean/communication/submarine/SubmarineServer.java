@@ -169,7 +169,24 @@ public class SubmarineServer extends Thread {
     }
 
     /**
-     * Trennt ein Submarine nach ID (Force-Exit).
+     * Sendet einen arise-Befehl an ein Submarine, damit es sich sauber beendet.
+     * Die Submarine-Anwendung beendet sich nach Empfang automatisch.
+     *
+     * @param submarineId ID des Submarines
+     * @return true wenn gefunden und arise gesendet
+     */
+    public boolean ariseSubmarine(String submarineId) {
+        for (SubmarineSession s : activeSessions) {
+            if (submarineId.equals(s.getSubmarineId())) {
+                s.sendAriseAndClose();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Trennt ein Submarine nach ID (Force-Exit, nur als Fallback).
      *
      * @param submarineId ID des Submarines
      * @return true wenn gefunden und getrennt

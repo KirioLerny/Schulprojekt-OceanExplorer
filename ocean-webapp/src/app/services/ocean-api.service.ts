@@ -91,6 +91,12 @@ export class OceanApiService {
       .pipe(catchError(this.handleError));
   }
 
+  /** Sendet arise an ein Submarine – die Submarine-App beendet sich dann automatisch. */
+  ariseSubmarine(submarineId: string): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${this.BASE}/api/submarine/arise`, { submarineId })
+      .pipe(catchError(this.handleError));
+  }
+
   getAllSubmarines(): Observable<Submarine[]> {
     return this.http.get<Submarine[]>(`${this.BASE}/api/submarines`)
       .pipe(catchError(this.handleError));

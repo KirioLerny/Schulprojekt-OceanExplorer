@@ -44,7 +44,6 @@ export class ControlComponent implements OnInit, OnDestroy {
     });
     this.pollShip();
     this.loadSubmarines();
-    // Ship-Poll und Sub-Poll laufen unabhängig voneinander
     this.pollTimer = setInterval(() => {
       this.pollShip();
       this.loadSubmarines();
@@ -101,13 +100,14 @@ export class ControlComponent implements OnInit, OnDestroy {
     return this.PILOT_LABELS[step] ?? `Schritt ${step}`;
   }
 
-  disconnectByName(subName: string) {
-    if (!confirm(`Submarine "${subName}" wirklich abbrechen?`)) return;
+  /** Submarine sauber einziehen via arise (Submarine-App beendet sich dann automatisch). */
+  ariseByName(subName: string) {
+    if (!confirm(`Submarine "${subName}" einziehen (arise)?`)) return;
     this.loading = true;
-    this.api.disconnectSubmarine(subName).subscribe({
+    this.api.ariseSubmarine(subName).subscribe({
       next: res => {
         this.loading = false;
-        this.snack.open(res.success ? `${subName} getrennt` : (res.error ?? 'Fehler'), 'OK', { duration: 3000 });
+        this.snack.open(res.success ? `${subName} eingezogen` : (res.error ?? 'Fehler'), 'OK', { duration: 3000 });
         this.loadSubmarines();
       },
       error: err => { this.loading = false; this.snack.open(err.message, 'OK', { duration: 4000 }); }

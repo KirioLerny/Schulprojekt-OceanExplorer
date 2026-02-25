@@ -64,6 +64,7 @@ public class ControlApiServer {
     private volatile SubmarineServer subServer = null;
     private volatile long activeShipDbId       = -1;
     private volatile String activeShipServerId = null;
+    private volatile boolean lastLaunchSucceeded = false;  // kein TCP-Probe nötig
     private final String oceanHost;
     private volatile int subServerPort = SubmarineServer.DEFAULT_PORT;
 
@@ -102,6 +103,7 @@ public class ControlApiServer {
         javalin.get("/api/submarines/active",             this::handleGetActiveSubmarines);
         javalin.get("/api/submarines/sessions",           this::handleGetSubmarineSessions);
         javalin.post("/api/submarine/disconnect",         this::handleDisconnectSubmarine);
+        javalin.post("/api/submarine/arise",              this::handleAriseSubmarine);
         javalin.get("/api/scans",                         this::handleGetAllScans);
         javalin.post("/api/submarine/launch",             this::handleLaunchSubmarine);
         javalin.post("/api/submarine/{id}/exit",          this::handleExitSubmarine);
@@ -154,6 +156,7 @@ public class ControlApiServer {
             activeClient       = client;
             activeShipName     = name;
             activeShipServerId = client.getShipServerId();
+            lastLaunchSucceeded = true;
             launchedSubCount.set(0);
 
             Ship ship = new Ship(name, startPos, startDir);
@@ -167,7 +170,15 @@ public class ControlApiServer {
 
         } catch (IOException e) {
             try { client.disconnect(); } catch (Exception ignored) {}
-            ctx.json(err("OceanServer nicht erreichbar: " + e.getMessage()));
+            lastLaunchSucceeded = false;
+            logger.error("OceanServer nicht erreichbar ({}:{}): {}", oceanHost, OCEAN_SHIP_PORT, e.getMessage());
+            ctx.json(err(
+                "OceanServer nicht erreichbar (" + oceanHost + ":" + OCEAN_SHIP_PORT + ").\n" +
+                "Bitte prüfen:\n" +
+                "  1. OceanServer starten: java -jar external/oceanserver.jar external/oceanserver.conf\n" +
+                "  2. In der OceanServer-GUI auf 'Start' klicken\n" +
+                "  3. Danach hier erneut versuchen"
+            ));
         } catch (Exception e) {
             logger.error("Launch-Fehler: {}", e.getMessage());
             ctx.json(err("Interner Fehler: " + e.getMessage()));
@@ -358,6 +369,23 @@ public class ControlApiServer {
         else       ctx.json(err("Submarine " + subId + " nicht gefunden"));
     }
 
+    /**
+     * Sendet arise an ein Submarine – die Submarine-App beendet sich dann automatisch.
+     * POST /api/submarine/arise  { "submarineId": "..." }
+     */
+    private void handleAriseSubmarine(Context ctx) {
+        JSONObject body;
+        try { body = new JSONObject(ctx.body()); } catch (Exception e) {
+            ctx.status(400).json(err("Ungültiger JSON-Body")); return;
+        }
+        String subId = body.optString("submarineId", "");
+        if (subId.isBlank()) { ctx.status(400).json(err("submarineId fehlt")); return; }
+        if (subServer == null) { ctx.json(err("Kein SubmarineServer aktiv")); return; }
+        boolean found = subServer.ariseSubmarine(subId);
+        if (found) ctx.json(ok("Submarine " + subId + " eingezogen (arise)"));
+        else       ctx.json(err("Submarine " + subId + " nicht gefunden oder bereits beendet"));
+    }
+
     private List<Map<String, Object>> buildSubmarineList(Long shipId) {
         List<Map<String, Object>> result = new ArrayList<>();
         // Erst alle live Sessions aus SubmarineServer (auch "connecting-N")
@@ -537,15 +565,20 @@ public class ControlApiServer {
     }
 
     private void handleStatus(Context ctx) {
+        // Erreichbarkeit: true wenn Schiff aktiv verbunden ODER letzter Launch hat geklappt
+        boolean oceanReachable = (activeClient != null && activeClient.isConnected())
+                || lastLaunchSucceeded;
         Map<String, Object> status = new LinkedHashMap<>();
-        status.put("serverRunning",      true);
-        status.put("activeShip",         activeShipName);
-        status.put("subsLaunched",       launchedSubCount.get());
-        status.put("subServerRunning",   subServer != null && subServer.isAlive());
-        status.put("activeSessions",     subServer != null ? subServer.getActiveSessionCount() : 0);
-        status.put("activeSubmarineIds", subServer != null ? subServer.getActiveSubmarineIds() : List.of());
+        status.put("serverRunning",        true);
+        status.put("oceanServerReachable", oceanReachable);
+        status.put("activeShip",           activeShipName);
+        status.put("subsLaunched",         launchedSubCount.get());
+        status.put("subServerRunning",     subServer != null && subServer.isAlive());
+        status.put("activeSessions",       subServer != null ? subServer.getActiveSessionCount() : 0);
+        status.put("activeSubmarineIds",   subServer != null ? subServer.getActiveSubmarineIds() : List.of());
         ctx.json(status);
     }
+
 
     private Map<String, Object> buildShipJson(String name, Object x, Object y, Object dirX, Object dirY) {
         boolean isActive = name.equals(activeShipName);
