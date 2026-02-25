@@ -18,8 +18,6 @@ import static org.jooq.impl.DSL.*;
  * Repository für ShipScan-Datenbank-Operationen.
  *
  * Speichert Tiefen-Scan-Messungen von Schiffen.
- *
- * @author OceanExplorer Team
  */
 public class ScanRepository {
 
@@ -41,10 +39,8 @@ public class ScanRepository {
     public void saveScan(long shipId, Vec2D position, ScanResult scanResult) {
         logger.debug("Speichere Scan an Position {}", position);
 
-        // Prüfe ob Sektor bereits existiert, sonst erstelle ihn
         Long sectorId = getOrCreateSector(position);
 
-        // Scan speichern
         dsl.insertInto(table("ship_scan"))
                 .columns(
                         field("ship_id"),
@@ -64,7 +60,7 @@ public class ScanRepository {
                 )
                 .execute();
 
-        logger.debug("✅ Scan gespeichert");
+        logger.debug("Scan gespeichert");
     }
 
     /**
@@ -164,7 +160,6 @@ public class ScanRepository {
      * @return Sektor-ID
      */
     private Long getOrCreateSector(Vec2D position) {
-        // Prüfe ob Sektor existiert
         Record existing = dsl.select(field("id"))
                 .from(table("sector"))
                 .where(field("x").eq(position.getX()))
@@ -175,13 +170,11 @@ public class ScanRepository {
             return existing.get(field("id", Long.class));
         }
 
-        // INSERT via jOOQ (kein returning() – nicht zuverlässig mit MySQL über exec-maven)
         dsl.insertInto(table("sector"))
                 .columns(field("x"), field("y"), field("ground_type"), field("height"))
                 .values(position.getX(), position.getY(), "WATER", 0)
                 .execute();
 
-        // ID per separatem SELECT holen – zuverlässigste Methode mit MySQL
         Record idRecord = dsl.select(field("id"))
                 .from(table("sector"))
                 .where(field("x").eq(position.getX()))
@@ -189,7 +182,7 @@ public class ScanRepository {
                 .fetchOne();
 
         if (idRecord == null) {
-            throw new RuntimeException("Sektor konnte nicht angelegt werden – SELECT nach INSERT lieferte kein Ergebnis");
+            throw new RuntimeException("Sektor konnte nicht angelegt werden - SELECT nach INSERT lieferte kein Ergebnis");
         }
         return idRecord.get(field("id", Long.class));
     }

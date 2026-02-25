@@ -13,43 +13,35 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * Zentrale Datenbank-Verbindungsklasse für Ocean Explorer.
+ * Zentrale Datenbank-Verbindungsklasse fuer Ocean Explorer.
  *
+ * <pre>
  * Verwaltet MySQL-Verbindung mit HikariCP Connection Pool und jOOQ DSLContext.
- *
- * @author OceanExplorer Team
+ * Konfiguration ueber Umgebungsvariablen: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD.
+ * </pre>
  */
 public class DatabaseConnection {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseConnection.class);
 
-    /** Singleton-Instance */
     private static DatabaseConnection instance;
 
-    /** HikariCP DataSource (Connection Pool) */
     private HikariDataSource dataSource;
-
-    /** jOOQ DSL Context */
     private DSLContext dsl;
 
-    // Datenbank-Konfiguration (kann über Umgebungsvariablen überschrieben werden)
-    private static final String DB_HOST = System.getenv().getOrDefault("DB_HOST", "localhost");
-    private static final String DB_PORT = System.getenv().getOrDefault("DB_PORT", "3306");
-    private static final String DB_NAME = System.getenv().getOrDefault("DB_NAME", "oceanexplorer");
-    private static final String DB_USER = System.getenv().getOrDefault("DB_USER", "oceanapp");
+    private static final String DB_HOST     = System.getenv().getOrDefault("DB_HOST",     "localhost");
+    private static final String DB_PORT     = System.getenv().getOrDefault("DB_PORT",     "3306");
+    private static final String DB_NAME     = System.getenv().getOrDefault("DB_NAME",     "oceanexplorer");
+    private static final String DB_USER     = System.getenv().getOrDefault("DB_USER",     "oceanapp");
     private static final String DB_PASSWORD = System.getenv().getOrDefault("DB_PASSWORD", "oceanpass123");
 
-    /**
-     * Privater Konstruktor (Singleton).
-     */
     private DatabaseConnection() {
-        // Wird über getInstance() aufgerufen
     }
 
     /**
-     * Gibt die Singleton-Instance zurück.
+     * Gibt die Singleton-Instanz zurueck.
      *
-     * @return DatabaseConnection-Instance
+     * @return DatabaseConnection-Instanz
      */
     public static synchronized DatabaseConnection getInstance() {
         if (instance == null) {
@@ -69,8 +61,9 @@ public class DatabaseConnection {
             return;
         }
 
-        String jdbcUrl = String.format("jdbc:mysql://%s:%s/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Europe/Berlin",
-                DB_HOST, DB_PORT, DB_NAME);
+        String jdbcUrl = String.format(
+            "jdbc:mysql://%s:%s/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Europe/Berlin",
+            DB_HOST, DB_PORT, DB_NAME);
 
         logger.info("Verbinde zu MySQL-Datenbank:");
         logger.info("  Host: {}:{}", DB_HOST, DB_PORT);
@@ -78,39 +71,28 @@ public class DatabaseConnection {
         logger.info("  Benutzer: {}", DB_USER);
 
         try {
-            // HikariCP konfigurieren
             HikariConfig config = new HikariConfig();
             config.setJdbcUrl(jdbcUrl);
             config.setUsername(DB_USER);
             config.setPassword(DB_PASSWORD);
             config.setDriverClassName("com.mysql.cj.jdbc.Driver");
-
-            // Connection Pool Einstellungen
             config.setMaximumPoolSize(10);
             config.setMinimumIdle(2);
             config.setConnectionTimeout(30000);
             config.setIdleTimeout(600000);
             config.setMaxLifetime(1800000);
             config.setPoolName("OceanExplorerPool");
-
-            // Performance-Optimierungen
             config.addDataSourceProperty("cachePrepStmts", "true");
             config.addDataSourceProperty("prepStmtCacheSize", "250");
             config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
             config.addDataSourceProperty("useServerPrepStmts", "true");
 
-            // DataSource erstellen
             dataSource = new HikariDataSource(config);
-
-            // jOOQ DSLContext erstellen
             dsl = DSL.using(dataSource, SQLDialect.MYSQL);
 
-            logger.info("✅ Datenbank verbunden (Connection Pool aktiv)");
+            logger.info("Datenbank verbunden (Connection Pool aktiv)");
 
-            // Verbindung testen
             testConnection();
-
-            // Schema-Migration: fehlende Spalten nachrüsten
             migrateSchema();
 
         } catch (Exception e) {
@@ -119,13 +101,11 @@ public class DatabaseConnection {
     }
 
     /**
-     * Führt Schema-Migrationen durch.
-     * Fügt fehlende Spalten hinzu ohne bestehende Daten zu löschen.
-     * MySQL unterstützt kein "ADD COLUMN IF NOT EXISTS" direkt – wir prüfen vorher.
+     * Fuehrt Schema-Migrationen durch.
+     * Fuegt fehlende Spalten hinzu ohne bestehende Daten zu loeschen.
      */
     private void migrateSchema() {
         try (Connection conn = dataSource.getConnection()) {
-            // submarine_photo: Positions-/Richtungsspalten nachrüsten
             String[] photoColumns = {"x", "y", "z", "dir_x", "dir_y", "dir_z"};
             for (String col : photoColumns) {
                 try (var rs = conn.getMetaData().getColumns(null, null, "submarine_photo", col)) {
@@ -133,7 +113,7 @@ public class DatabaseConnection {
                         String sql = "ALTER TABLE submarine_photo ADD COLUMN " + col + " INT";
                         try (var stmt = conn.createStatement()) {
                             stmt.execute(sql);
-                            logger.info("✅ Schema-Migration: submarine_photo.{} hinzugefügt", col);
+                            logger.info("Schema-Migration: submarine_photo.{} hinzugefuegt", col);
                         }
                     }
                 }
@@ -151,15 +131,15 @@ public class DatabaseConnection {
     private void testConnection() throws SQLException {
         try (Connection conn = dataSource.getConnection()) {
             if (conn.isValid(5)) {
-                logger.info("✅ Datenbank-Verbindung erfolgreich getestet");
+                logger.info("Datenbank-Verbindung erfolgreich getestet");
             } else {
-                throw new SQLException("Datenbank-Verbindung ungültig");
+                throw new SQLException("Datenbank-Verbindung ungueltig");
             }
         }
     }
 
     /**
-     * Gibt den jOOQ DSLContext zurück.
+     * Gibt den jOOQ DSLContext zurueck.
      *
      * @return jOOQ DSLContext
      */
@@ -171,7 +151,7 @@ public class DatabaseConnection {
     }
 
     /**
-     * Gibt die DataSource zurück (für Transaktionen).
+     * Gibt die DataSource zurueck.
      *
      * @return HikariCP DataSource
      */
@@ -183,7 +163,7 @@ public class DatabaseConnection {
     }
 
     /**
-     * Gibt eine neue Connection aus dem Pool zurück.
+     * Gibt eine neue Connection aus dem Pool zurueck.
      *
      * @return JDBC Connection
      * @throws SQLException bei Fehlern
@@ -196,7 +176,7 @@ public class DatabaseConnection {
     }
 
     /**
-     * Schließt die Datenbank-Verbindung und den Connection Pool.
+     * Schliesst die Datenbank-Verbindung und den Connection Pool.
      */
     public void disconnect() {
         if (dataSource != null && !dataSource.isClosed()) {
@@ -208,7 +188,7 @@ public class DatabaseConnection {
     }
 
     /**
-     * Prüft ob Verbindung aktiv ist.
+     * Prueft ob Verbindung aktiv ist.
      *
      * @return true wenn verbunden
      */
@@ -217,7 +197,7 @@ public class DatabaseConnection {
     }
 
     /**
-     * Gibt Pool-Statistiken aus (für Monitoring).
+     * Gibt Pool-Statistiken aus.
      */
     public void logPoolStats() {
         if (dataSource != null) {

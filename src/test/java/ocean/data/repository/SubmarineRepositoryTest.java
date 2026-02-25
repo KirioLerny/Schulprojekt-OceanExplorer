@@ -17,7 +17,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("SubmarineRepository – Submarine, Tauchgang und Messpunkte")
+@DisplayName("SubmarineRepository - Submarine, Tauchgang und Messpunkte")
 class SubmarineRepositoryTest {
 
     @Mock private DatabaseConnection mockDb;
@@ -32,14 +32,9 @@ class SubmarineRepositoryTest {
         lenient().when(mockDb.getDSL()).thenReturn(mockDsl);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // saveSubmarine()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("saveSubmarine() führt INSERT und SELECT aus und gibt ID zurück")
+    @DisplayName("saveSubmarine() fuehrt INSERT und SELECT aus und gibt ID zurueck")
     void testSaveSubmarine() {
-        // The actual SQL + args differ from anyString/any matchers – use lenient
         lenient().when(mockDsl.execute(anyString(), any(), any(), any())).thenReturn(1);
 
         when(mockDsl.select(any(Field.class))).thenReturn(selectSelectStep);
@@ -52,19 +47,13 @@ class SubmarineRepositoryTest {
         assertEquals(5L, id);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // startDive()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("startDive() gibt Tauchgang-ID zurück")
+    @DisplayName("startDive() gibt Tauchgang-ID zurueck")
     @SuppressWarnings({"unchecked", "rawtypes"})
     void testStartDive() {
-        // RETURNS_DEEP_STUBS handles .columns(...).values(...).execute()
         InsertSetStep insertMock = mock(InsertSetStep.class, RETURNS_DEEP_STUBS);
         when(mockDsl.insertInto(any(Table.class))).thenReturn(insertMock);
 
-        // orderBy().limit().fetchOne() chain – also use RETURNS_DEEP_STUBS
         SelectConditionStep deepCond = mock(SelectConditionStep.class, RETURNS_DEEP_STUBS);
         when(mockDsl.select(any(Field.class))).thenReturn(selectSelectStep);
         when(selectSelectStep.from(any(Table.class))).thenReturn(selectJoinStep);
@@ -76,12 +65,8 @@ class SubmarineRepositoryTest {
         assertEquals(7L, diveId);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // endDive()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("endDive() führt UPDATE aus mit korrektem Status")
+    @DisplayName("endDive() fuehrt UPDATE aus mit korrektem Status")
     @SuppressWarnings({"unchecked", "rawtypes"})
     void testEndDive() {
         UpdateSetFirstStep updateStep = mock(UpdateSetFirstStep.class, RETURNS_DEEP_STUBS);
@@ -91,12 +76,8 @@ class SubmarineRepositoryTest {
         verify(mockDsl).update(any(Table.class));
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // deactivateSubmarine()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("deactivateSubmarine() führt UPDATE aus")
+    @DisplayName("deactivateSubmarine() fuehrt UPDATE aus")
     @SuppressWarnings({"unchecked", "rawtypes"})
     void testDeactivateSubmarine() {
         UpdateSetFirstStep updateStep = mock(UpdateSetFirstStep.class, RETURNS_DEEP_STUBS);
@@ -106,12 +87,8 @@ class SubmarineRepositoryTest {
         verify(mockDsl).update(any(Table.class));
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // saveMeasurementPoint() und saveMeasurementPoints()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("saveMeasurementPoint() führt INSERT IGNORE aus")
+    @DisplayName("saveMeasurementPoint() fuehrt INSERT IGNORE aus")
     void testSaveMeasurementPoint() {
         when(mockDsl.execute(anyString(), anyLong(), anyInt(), anyInt(), anyInt())).thenReturn(1);
 
@@ -135,10 +112,83 @@ class SubmarineRepositoryTest {
     }
 
     @Test
-    @DisplayName("saveMeasurementPoints() mit leerer Liste führt keinen INSERT aus")
+    @DisplayName("saveMeasurementPoints() mit leerer Liste fuehrt keinen INSERT aus")
     void testSaveMeasurementPointsEmpty() {
         assertDoesNotThrow(() -> new SubmarineRepository(mockDb).saveMeasurementPoints(1L, List.of()));
         verify(mockDsl, never()).execute(anyString(), anyLong(), anyInt(), anyInt(), anyInt());
     }
-}
 
+    @Test
+    @DisplayName("findByShip() liefert leere Liste wenn keine Submarines gefunden")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void testFindByShipEmpty() {
+        org.jooq.Result emptyResult = mock(org.jooq.Result.class, RETURNS_DEEP_STUBS);
+        when(emptyResult.iterator()).thenReturn(List.of().iterator());
+        when(mockDsl.fetch(anyString(), anyLong())).thenReturn(emptyResult);
+
+        List<SubmarineRepository.SubmarineInfo> result =
+                new SubmarineRepository(mockDb).findByShip(99L);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("findByShip() ruft fetch mit ship_id-Parameter auf")
+    void testFindByShipCallsFetchWithShipId() {
+        when(mockDsl.fetch(anyString(), anyLong())).thenReturn(mock(org.jooq.Result.class, RETURNS_DEEP_STUBS));
+        new SubmarineRepository(mockDb).findByShip(42L);
+        verify(mockDsl).fetch(anyString(), eq(42L));
+    }
+
+    @Test
+    @DisplayName("findAll() ruft fetch ohne Parameter auf")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void testFindAllCallsFetch() {
+        org.jooq.Result emptyResult = mock(org.jooq.Result.class, RETURNS_DEEP_STUBS);
+        when(emptyResult.iterator()).thenReturn(List.of().iterator());
+        when(mockDsl.fetch(anyString())).thenReturn(emptyResult);
+
+        List<SubmarineRepository.SubmarineInfo> result =
+                new SubmarineRepository(mockDb).findAll();
+
+        verify(mockDsl).fetch(anyString());
+        assertNotNull(result);
+    }
+
+    @Test
+    @DisplayName("findAllMeasurements() ruft fetch ohne Parameter auf")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void testFindAllMeasurementsCallsFetch() {
+        org.jooq.Result emptyResult = mock(org.jooq.Result.class, RETURNS_DEEP_STUBS);
+        when(emptyResult.iterator()).thenReturn(List.of().iterator());
+        when(mockDsl.fetch(anyString())).thenReturn(emptyResult);
+
+        List<SubmarineRepository.MeasurementInfo> result =
+                new SubmarineRepository(mockDb).findAllMeasurements();
+
+        verify(mockDsl).fetch(anyString());
+        assertNotNull(result);
+    }
+
+    @Test
+    @DisplayName("SubmarineInfo Record speichert alle Felder korrekt")
+    void testSubmarineInfoRecord() {
+        SubmarineRepository.SubmarineInfo info =
+                new SubmarineRepository.SubmarineInfo(7L, "#1#TestSub", 3L, true);
+        assertEquals(7L, info.id());
+        assertEquals("#1#TestSub", info.name());
+        assertEquals(3L, info.shipId());
+        assertTrue(info.active());
+    }
+
+    @Test
+    @DisplayName("MeasurementInfo Record speichert x, y, z korrekt")
+    void testMeasurementInfoRecord() {
+        SubmarineRepository.MeasurementInfo info =
+                new SubmarineRepository.MeasurementInfo(10, 20, -50);
+        assertEquals(10, info.x());
+        assertEquals(20, info.y());
+        assertEquals(-50, info.z());
+    }
+}

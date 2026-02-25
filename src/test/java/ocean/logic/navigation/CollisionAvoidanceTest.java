@@ -10,7 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("CollisionAvoidance – Richtungsentscheidung per Radar")
+@DisplayName("CollisionAvoidance - Richtungsentscheidung per Radar")
 class CollisionAvoidanceTest {
 
     private CollisionAvoidance ca;
@@ -19,10 +19,6 @@ class CollisionAvoidanceTest {
     void setUp() {
         ca = new CollisionAvoidance();
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // Hilfsmethode: einfache Radar-Liste aus sicheren Sektoren
-    // ──────────────────────────────────────────────────────────────
 
     private List<RadarEcho> allWater() {
         List<RadarEcho> echoes = new ArrayList<>();
@@ -37,12 +33,8 @@ class CollisionAvoidanceTest {
         return new ArrayList<>();
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // chooseSafeDirection – Grundfälle
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("Bei freier Fahrt wählt chooseSafeDirection() Rudder.Center")
+    @DisplayName("Bei freier Fahrt waehlt chooseSafeDirection() Rudder.Center")
     void testChooseCenterWhenAllFree() {
         Vec2D northDir = new Vec2D(0, 1);
         Rudder result = ca.chooseSafeDirection(allWater(), northDir);
@@ -51,52 +43,43 @@ class CollisionAvoidanceTest {
     }
 
     @Test
-    @DisplayName("chooseSafeDirection() gibt Rudder-Wert zurück (nicht null) wenn Wasser frei")
+    @DisplayName("chooseSafeDirection() gibt Rudder-Wert zurueck (nicht null) wenn Wasser frei")
     void testReturnNotNullWithFreeWater() {
-        Vec2D dir = new Vec2D(1, 0); // Ost
+        Vec2D dir = new Vec2D(1, 0);
         Rudder result = ca.chooseSafeDirection(allWater(), dir);
         assertNotNull(result);
     }
 
     @Test
-    @DisplayName("chooseSafeDirection() gibt null zurück bei leerer Radar-Liste")
+    @DisplayName("chooseSafeDirection() gibt bei leerer Radar-Liste Center zurueck (MVP)")
     void testNullOnEmptyRadar() {
-        // Leere Liste → isSectorSafe() findet keine blockierenden Echos → gibt true → Center
-        // Aktuelles Verhalten: MVP gibt immer true → Center zurück
-        // Dieser Test dokumentiert das aktuelle Verhalten
         Vec2D dir = new Vec2D(0, 1);
         Rudder result = ca.chooseSafeDirection(emptyRadar(), dir);
-        // MVP: immer safe → Center
         assertNotNull(result);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // rotateRight / rotateLeft – indirekt über calculateTargetSector
-    // Wir testen alle 8 Richtungen indirekt durch chooseSafeDirection
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("chooseSafeDirection() liefert für alle 8 Richtungsvektoren ein Ergebnis")
+    @DisplayName("chooseSafeDirection() liefert fuer alle 8 Richtungsvektoren ein Ergebnis")
     void testAllDirectionsReturnResult() {
         Vec2D[] directions = {
-            new Vec2D(0, 1),   // N
-            new Vec2D(1, 1),   // NE
-            new Vec2D(1, 0),   // E
-            new Vec2D(1, -1),  // SE
-            new Vec2D(0, -1),  // S
-            new Vec2D(-1, -1), // SW
-            new Vec2D(-1, 0),  // W
-            new Vec2D(-1, 1),  // NW
+            new Vec2D(0, 1),
+            new Vec2D(1, 1),
+            new Vec2D(1, 0),
+            new Vec2D(1, -1),
+            new Vec2D(0, -1),
+            new Vec2D(-1, -1),
+            new Vec2D(-1, 0),
+            new Vec2D(-1, 1),
         };
 
         for (Vec2D dir : directions) {
             Rudder result = ca.chooseSafeDirection(allWater(), dir);
-            assertNotNull(result, "Für Richtung " + dir + " sollte kein null zurückgegeben werden");
+            assertNotNull(result, "Fuer Richtung " + dir + " sollte kein null zurueckgegeben werden");
         }
     }
 
     @Test
-    @DisplayName("chooseSafeDirection() gibt immer einen der 3 Rudder-Werte zurück (oder null)")
+    @DisplayName("chooseSafeDirection() gibt immer einen der 3 Rudder-Werte zurueck (oder null)")
     void testResultIsValidRudder() {
         Vec2D dir = new Vec2D(0, 1);
         Rudder result = ca.chooseSafeDirection(allWater(), dir);
@@ -106,4 +89,3 @@ class CollisionAvoidanceTest {
         );
     }
 }
-

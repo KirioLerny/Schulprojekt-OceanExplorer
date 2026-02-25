@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("CommandFactory – JSON-Befehl-Erzeugung")
+@DisplayName("CommandFactory - JSON-Befehl-Erzeugung")
 class CommandFactoryTest {
 
     @Test
@@ -21,16 +21,15 @@ class CommandFactoryTest {
         String json = CommandFactory.launch("MeinSchiff", VehicleType.ship, sector, direction);
 
         JSONObject jo = new JSONObject(json);
-        assertEquals("launch",    jo.getString("cmd"));
+        assertEquals("launch",     jo.getString("cmd"));
         assertEquals("MeinSchiff", jo.getString("name"));
-        assertEquals("ship",      jo.getString("typ"));
-        // sector und dir müssen als JSONObject enthalten sein
+        assertEquals("ship",       jo.getString("typ"));
         assertTrue(jo.has("sector"));
         assertTrue(jo.has("dir"));
     }
 
     @Test
-    @DisplayName("launch() enthält korrekte Sektor-Koordinaten")
+    @DisplayName("launch() enthaelt korrekte Sektor-Koordinaten")
     void testLaunchSectorCoordinates() {
         Vec2D sector    = new Vec2D(42, 77);
         Vec2D direction = new Vec2D(1, 0);
@@ -38,14 +37,13 @@ class CommandFactoryTest {
 
         JSONObject jo = new JSONObject(json);
         JSONObject sectorObj = jo.getJSONObject("sector");
-        // Vec2D.toJson() erzeugt {"vec2":[x,y]}
         assertTrue(sectorObj.has("vec2"));
         assertEquals(42, sectorObj.getJSONArray("vec2").getInt(0));
         assertEquals(77, sectorObj.getJSONArray("vec2").getInt(1));
     }
 
     @Test
-    @DisplayName("navigate() erzeugt korrektes JSON für alle Rudder/Course-Kombinationen")
+    @DisplayName("navigate() erzeugt korrektes JSON fuer alle Rudder/Course-Kombinationen")
     void testNavigate() {
         for (Rudder rudder : Rudder.values()) {
             for (Course course : Course.values()) {
@@ -86,7 +84,7 @@ class CommandFactoryTest {
     }
 
     @Test
-    @DisplayName("Alle Befehle liefern gültiges JSON (nicht null, nicht leer)")
+    @DisplayName("Alle Befehle liefern gueltiges JSON (nicht null, nicht leer)")
     void testAllCommandsReturnValidJson() {
         assertDoesNotThrow(() -> new JSONObject(CommandFactory.radar()));
         assertDoesNotThrow(() -> new JSONObject(CommandFactory.scan()));
@@ -94,7 +92,6 @@ class CommandFactoryTest {
         assertDoesNotThrow(() -> new JSONObject(
                 CommandFactory.navigate(Rudder.Center, Course.Forward)));
         assertDoesNotThrow(() -> new JSONObject(
-                CommandFactory.launch("X", VehicleType.ship, new Vec2D(0,0), new Vec2D(0,1))));
+                CommandFactory.launch("X", VehicleType.ship, new Vec2D(0, 0), new Vec2D(0, 1))));
     }
 }
-

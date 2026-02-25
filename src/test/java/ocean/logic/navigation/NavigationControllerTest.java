@@ -20,7 +20,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("NavigationController – autonome Navigation")
+@DisplayName("NavigationController - autonome Navigation")
 class NavigationControllerTest {
 
     @Mock private OceanClient mockClient;
@@ -34,10 +34,6 @@ class NavigationControllerTest {
         ship = new Ship("TestSchiff", new Vec2D(5, 5), new Vec2D(0, 1));
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // Hilfsmethoden
-    // ──────────────────────────────────────────────────────────────
-
     private List<RadarEcho> buildFreeRadar() {
         List<RadarEcho> echoes = new ArrayList<>();
         int[][] offsets = {{-1,0},{-1,1},{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1}};
@@ -46,10 +42,6 @@ class NavigationControllerTest {
         }
         return echoes;
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // Konstruktor
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("Konstruktor setzt Schiff korrekt")
@@ -65,18 +57,11 @@ class NavigationControllerTest {
         assertEquals(0, nc.getVisitedCount());
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // explore() – mit Mocks
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("explore(1) scannt genau 1 Sektor und bewegt sich danach")
     void testExploreOnesSector() throws IOException {
-        // scan() liefert Ergebnis
         ScanResult scanResult = new ScanResult(new Vec2D(5, 5), -100, 5.0f);
         when(mockClient.scan()).thenReturn(scanResult);
-
-        // radar() und navigate() werden nach dem letzten Sektor nicht mehr benötigt → lenient
         lenient().when(mockClient.radar()).thenReturn(buildFreeRadar());
         lenient().when(mockClient.navigate(any(Rudder.class), any(Course.class)))
                 .thenReturn(new OceanClient.NavigateResult(new Vec2D(5, 6), new Vec2D(0, 1)));
@@ -89,7 +74,7 @@ class NavigationControllerTest {
     }
 
     @Test
-    @DisplayName("explore(0) führt keinen Scan durch")
+    @DisplayName("explore(0) fuehrt keinen Scan durch")
     void testExploreZeroSectors() throws IOException {
         NavigationController nc = new NavigationController(mockClient, ship);
         nc.explore(0);
@@ -105,15 +90,11 @@ class NavigationControllerTest {
         when(mockClient.scan()).thenReturn(scanResult);
 
         NavigationController nc = new NavigationController(mockClient, ship);
-
-        // Erster Aufruf: Sektor (5,5) wird gescannt
         nc.explore(1);
         assertEquals(1, nc.getVisitedCount());
 
-        // Zweiter Aufruf: Schiff ist noch auf (5,5) → Sektor bereits besucht → kein zweiter Scan
         nc.explore(1);
 
-        // scan() soll insgesamt nur 1 Mal aufgerufen worden sein
         verify(mockClient, times(1)).scan();
     }
 
@@ -124,7 +105,6 @@ class NavigationControllerTest {
 
         ScanResult scanResult = new ScanResult(new Vec2D(5, 5), -100, 5.0f);
         when(mockClient.scan()).thenReturn(scanResult);
-        // lenient: nach dem letzten Sektor wird radar/navigate nicht mehr aufgerufen
         lenient().when(mockClient.radar()).thenReturn(buildFreeRadar());
         lenient().when(mockClient.navigate(any(), any())).thenReturn(
                 new OceanClient.NavigateResult(new Vec2D(5, 6), new Vec2D(0, 1)));
@@ -137,17 +117,16 @@ class NavigationControllerTest {
     }
 
     @Test
-    @DisplayName("explore() bricht ab wenn navigation fehlschlägt (navigate() liefert null)")
+    @DisplayName("explore() bricht ab wenn Navigation fehlschlaegt (navigate() liefert null)")
     void testExploreAbortsOnNavigationFailure() throws IOException {
         ScanResult scanResult = new ScanResult(new Vec2D(5, 5), -100, 5.0f);
         when(mockClient.scan()).thenReturn(scanResult);
         when(mockClient.radar()).thenReturn(buildFreeRadar());
-        when(mockClient.navigate(any(), any())).thenReturn(null);  // Navigation schlägt fehl
+        when(mockClient.navigate(any(), any())).thenReturn(null);
 
         NavigationController nc = new NavigationController(mockClient, ship);
-        nc.explore(3);  // Möchte 3, aber soll nach erstem Fehlschlag abbrechen
+        nc.explore(3);
 
-        // Nur 1 Scan (erster Sektor) wurde erfolgreich ausgeführt
         verify(mockClient, times(1)).scan();
     }
 
@@ -155,8 +134,6 @@ class NavigationControllerTest {
     @DisplayName("setSubmarineServer() wird akzeptiert ohne Exception")
     void testSetSubmarineServer() {
         NavigationController nc = new NavigationController(mockClient, ship);
-        // Kein SubmarineServer verfügbar ohne DB – nur testen dass kein NPE geworfen wird
         assertDoesNotThrow(() -> nc.setSubmarineServer(null));
     }
 }
-

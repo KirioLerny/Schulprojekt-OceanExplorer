@@ -1,30 +1,25 @@
 package ocean.model;
 
 /**
- * Repräsentiert das Ergebnis eines Scan-Befehls.
+ * Repraesentiert das Ergebnis eines Scan-Befehls.
  *
- * Ein Scan liefert Informationen über die Meerestiefe in einem Sektor:
- * - Mittlere Tiefe (in Metern, negativ = unter Wasser)
- * - Standardabweichung (Variation der Tiefe)
- *
- * @author OceanExplorer Team
+ * <pre>
+ * Ein Scan liefert Informationen ueber die Meerestiefe in einem Sektor:
+ *   Mittlere Tiefe (in Metern, negativ = unter Wasser)
+ *   Standardabweichung (Variation der Tiefe)
+ * </pre>
  */
 public class ScanResult {
 
-    /** Sektor, in dem der Scan durchgeführt wurde */
     private final Vec2D sector;
-
-    /** Mittlere Tiefe in Metern (negativ = unter Wasser) */
     private final int averageDepth;
-
-    /** Standardabweichung der Tiefenmessung */
     private final float standardDeviation;
 
     /**
      * Erstellt ein neues Scan-Ergebnis.
      *
-     * @param sector Gescannter Sektor
-     * @param averageDepth Mittlere Tiefe
+     * @param sector            Gescannter Sektor
+     * @param averageDepth      Mittlere Tiefe
      * @param standardDeviation Standardabweichung
      */
     public ScanResult(Vec2D sector, int averageDepth, float standardDeviation) {
@@ -33,22 +28,14 @@ public class ScanResult {
         this.standardDeviation = standardDeviation;
     }
 
-    // === Getter ===
+    public Vec2D getSector() { return sector; }
 
-    public Vec2D getSector() {
-        return sector;
-    }
+    public int getAverageDepth() { return averageDepth; }
 
-    public int getAverageDepth() {
-        return averageDepth;
-    }
-
-    public float getStandardDeviation() {
-        return standardDeviation;
-    }
+    public float getStandardDeviation() { return standardDeviation; }
 
     /**
-     * Prüft ob der Sektor befahrbar ist (Tiefe < 0 = Wasser).
+     * Prueft ob der Sektor befahrbar ist (Tiefe &lt; 0 = Wasser).
      *
      * @return true wenn Wasser vorhanden
      */
@@ -63,4 +50,3 @@ public class ScanResult {
                "m, stdDev=" + standardDeviation + "]";
     }
 }
-

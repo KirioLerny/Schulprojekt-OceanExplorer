@@ -13,52 +13,37 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TCP-Client für die Kommunikation mit dem OceanServer.
+ * TCP-Client fuer die Kommunikation mit dem OceanServer.
  *
- * Diese Klasse stellt die Verbindung zum OceanServer her und
- * bietet Methoden für alle verfügbaren Befehle.
+ * <pre>
+ * Stellt die Verbindung zum OceanServer her und bietet Methoden
+ * fuer alle verfuegbaren Befehle.
  *
  * Verwendung:
- * <pre>
- * OceanServerClient client = new OceanServerClient("localhost", 3000);
- * client.connect();
- * client.launch("MeinSchiff", new Vec2D(50, 50), new Vec2D(0, 1));
- * List<RadarEcho> radar = client.radar();
- * client.disconnect();
+ *   OceanClient client = new OceanClient("localhost", 3000);
+ *   client.connect();
+ *   client.launch("MeinSchiff", new Vec2D(50, 50), new Vec2D(0, 1));
+ *   List&lt;RadarEcho&gt; radar = client.radar();
+ *   client.disconnect();
  * </pre>
- *
- * @author OceanExplorer Team
  */
 public class OceanClient {
 
     private static final Logger logger = LoggerFactory.getLogger(OceanClient.class);
 
-    /** Server-Hostname oder IP-Adresse */
     private final String host;
-
-    /** Server-Port */
     private final int port;
-
-    /** TCP-Socket zum Server */
     private Socket socket;
-
-    /** Ausgabe-Stream zum Senden von Befehlen */
     private PrintWriter out;
-
-    /** Eingabe-Stream zum Empfangen von Antworten */
     private BufferedReader in;
-
-    /** Verbindungsstatus */
     private boolean connected = false;
-
-    /** Die vom OceanServer vergebene Ship-ID (z.B. "#1#Explorer-220556"), gesetzt nach launch() */
     private String shipServerId = null;
 
     /**
-     * Erstellt einen neuen OceanServerClient.
+     * Erstellt einen neuen OceanClient.
      *
      * @param host Server-Hostname (z.B. "localhost")
-     * @param port Server-Port (z.B. 3000)
+     * @param port Server-Port
      */
     public OceanClient(String host, int port) {
         this.host = host;
@@ -67,20 +52,15 @@ public class OceanClient {
 
     /**
      * Stellt die Verbindung zum OceanServer her.
-     * Der Server sendet nach Verbindung automatisch eine Config-Nachricht.
      *
-     * @throws IOException wenn Verbindung fehlschlägt
+     * @throws IOException wenn Verbindung fehlschlaegt
      */
     public void connect() throws IOException {
-        System.out.println("[DEBUG] Verbinde mit OceanServer " + host + ":" + port);
-
         socket = new Socket(host, port);
-        socket.setSoTimeout(30_000); // 30 Sekunden Lese-Timeout – verhindert endloses Hängen
+        socket.setSoTimeout(30_000);
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         connected = true;
-
-        System.out.println("[DEBUG] Verbindung hergestellt!");
         logger.info("Verbunden mit OceanServer: {}:{}", host, port);
     }
 
@@ -89,12 +69,9 @@ public class OceanClient {
      */
     public void disconnect() {
         logger.info("Trenne Verbindung zum OceanServer...");
-
         try {
             if (connected && out != null) {
-                // Exit-Befehl senden – Server antwortet NICHT, schließt nur die Verbindung
                 String exitCmd = CommandFactory.exit();
-                System.out.println(">>> Sende: " + exitCmd);
                 out.println(exitCmd);
                 out.flush();
             }
@@ -102,19 +79,18 @@ public class OceanClient {
             if (out != null) out.close();
             if (socket != null) socket.close();
         } catch (IOException e) {
-            logger.warn("Fehler beim Schließen der Verbindung: {}", e.getMessage());
+            logger.warn("Fehler beim Schliessen der Verbindung: {}", e.getMessage());
         } finally {
             connected = false;
         }
-
         logger.info("Verbindung getrennt.");
     }
 
     /**
      * Startet ein Schiff im OceanServer.
      *
-     * @param name Eindeutiger Schiffsname
-     * @param sector Startsektor (0-99, 0-99)
+     * @param name      Eindeutiger Schiffsname
+     * @param sector    Startsektor (0-99, 0-99)
      * @param direction Startrichtung
      * @return true wenn erfolgreich
      * @throws IOException bei Kommunikationsfehler
@@ -124,31 +100,22 @@ public class OceanClient {
         String response = sendCommand(command);
 
         JSONObject json = new JSONObject(response);
-
-        // Server antwortet mit "cmd":"launched" bei Erfolg
-        // Protokoll (2 Nachrichten!):
-        //   1. {"cmd":"launched","id":"...","abspos":{"vec2":[...]}}
-        //   2. {"cmd":"move2d","sector":...,"dir":...}    ← muss auch gelesen werden!
         String cmd = json.optString("cmd", "");
         boolean success = cmd.equals("launched");
 
         if (success) {
-            // Server-vergebene ID speichern (z.B. "#1#Explorer-220556")
             shipServerId = json.optString("id", null);
             logger.info("Schiff '{}' erfolgreich gestartet bei {} (Server-ID: {})", name, sector, shipServerId);
 
-            // WICHTIG: Server sendet nach "launched" noch eine "move2d" Nachricht.
-            // Diese muss gelesen werden, sonst verrutscht der gesamte Nachrichten-Buffer!
             String move2dLine = in.readLine();
             if (move2dLine != null) {
-                System.out.println("<<< Empfangen (move2d): " + move2dLine);
                 logger.debug("Launch-Folgenachricht gelesen: {}", move2dLine);
             } else {
                 throw new IOException("Verbindung verloren beim Lesen der move2d-Nachricht nach launch");
             }
         } else {
             String error = json.optString("error", "Unbekannter Fehler");
-            logger.error("Launch fehlgeschlagen: {} | Vollständige Antwort: {}", error, response);
+            logger.error("Launch fehlgeschlagen: {} | Vollstaendige Antwort: {}", error, response);
         }
 
         return success;
@@ -159,7 +126,7 @@ public class OceanClient {
      *
      * @param rudder Lenkrichtung (Left, Center, Right)
      * @param course Fahrtrichtung (Forward, Backward)
-     * @return Neue Position nach der Bewegung, oder null bei Fehler
+     * @return Neue Position und Richtung, oder null bei Fehler
      * @throws IOException bei Kommunikationsfehler
      */
     public NavigateResult navigate(Rudder rudder, Course course) throws IOException {
@@ -167,8 +134,6 @@ public class OceanClient {
         String response = sendCommand(command);
 
         JSONObject json = new JSONObject(response);
-
-        // Protokoll: Server antwortet mit "cmd":"move2d"
         String cmd = json.optString("cmd", "");
         if (!cmd.equals("move2d")) {
             String error = json.optString("error", "Unbekannter Fehler");
@@ -176,19 +141,17 @@ public class OceanClient {
             return null;
         }
 
-        // Protokoll: Felder sind "sector" und "dir" (als vec2)
-        Vec2D newPosition = Vec2D.fromJson(json.getJSONObject("sector"));
+        Vec2D newPosition  = Vec2D.fromJson(json.getJSONObject("sector"));
         Vec2D newDirection = Vec2D.fromJson(json.getJSONObject("dir"));
-
         logger.debug("Schiff bewegt zu {} mit Richtung {}", newPosition, newDirection);
 
         return new NavigateResult(newPosition, newDirection);
     }
 
     /**
-     * Führt einen Radar-Scan der 8 Nachbarsektoren durch.
+     * Fuehrt einen Radar-Scan der 8 Nachbarsektoren durch.
      *
-     * @return Liste der RadarEcho-Objekte für alle Nachbarsektoren
+     * @return Liste der RadarEcho-Objekte fuer alle Nachbarsektoren
      * @throws IOException bei Kommunikationsfehler
      */
     public List<RadarEcho> radar() throws IOException {
@@ -198,7 +161,6 @@ public class OceanClient {
         JSONObject json = new JSONObject(response);
         List<RadarEcho> echoes = new ArrayList<>();
 
-        // Protokoll: Server antwortet mit "cmd":"radarresponse"
         String cmd = json.optString("cmd", "");
         if (!cmd.equals("radarresponse")) {
             String error = json.optString("error", "Unbekannter Fehler");
@@ -206,7 +168,6 @@ public class OceanClient {
             return echoes;
         }
 
-        // Protokoll: Feld heißt "echos" (nicht "echoes")
         JSONArray echoArray = json.getJSONArray("echos");
         for (int i = 0; i < echoArray.length(); i++) {
             JSONObject echoJson = echoArray.getJSONObject(i);
@@ -221,9 +182,9 @@ public class OceanClient {
     }
 
     /**
-     * Führt einen Tiefen-Scan im aktuellen Sektor durch.
+     * Fuehrt einen Tiefen-Scan im aktuellen Sektor durch.
      *
-     * @return ScanResult mit Tiefe und Standardabweichung
+     * @return ScanResult mit Tiefe und Standardabweichung, oder null bei Fehler
      * @throws IOException bei Kommunikationsfehler
      */
     public ScanResult scan() throws IOException {
@@ -231,8 +192,6 @@ public class OceanClient {
         String response = sendCommand(command);
 
         JSONObject json = new JSONObject(response);
-
-        // Protokoll: Server antwortet mit "cmd":"scanned"
         String cmd = json.optString("cmd", "");
         if (!cmd.equals("scanned")) {
             String error = json.optString("error", "Unbekannter Fehler");
@@ -240,15 +199,9 @@ public class OceanClient {
             return null;
         }
 
-        // Protokoll: Felder sind "depth" und "stddev"
-        // Aktueller Sektor muss aus vorheriger Position bekannt sein
-        // oder wir erstellen einen Dummy-Sector (0,0)
         int depth = json.getInt("depth");
         float stdDev = (float) json.getDouble("stddev");
-
-        // TODO: Sektor aus aktuellem Schiffskontext holen
         Vec2D sector = new Vec2D(0, 0);
-
         ScanResult result = new ScanResult(sector, depth, stdDev);
         logger.debug("Scan: depth={}, stddev={}", depth, stdDev);
 
@@ -267,7 +220,7 @@ public class OceanClient {
             throw new IOException("Nicht mit OceanServer verbunden!");
         }
 
-        System.out.println(">>> Sende: " + command);
+        logger.debug(">>> {}", command);
         out.println(command);
         out.flush();
 
@@ -278,8 +231,8 @@ public class OceanClient {
             connected = false;
             throw new IOException(
                 "OceanServer hat nach 30 Sekunden NICHT geantwortet!\n" +
-                "  → Schiff-Name bereits vergeben? Bitte OceanServer neu starten.\n" +
-                "  → Läuft der OceanServer noch?"
+                "  Schiff-Name bereits vergeben? Bitte OceanServer neu starten.\n" +
+                "  Laeuft der OceanServer noch?"
             );
         }
 
@@ -287,27 +240,27 @@ public class OceanClient {
             connected = false;
             throw new IOException(
                 "OceanServer hat die Verbindung geschlossen!\n" +
-                "  → Wurde in der OceanServer-GUI auf 'Start' geklickt?\n" +
-                "  → Läuft der OceanServer noch?"
+                "  Wurde in der OceanServer-GUI auf 'Start' geklickt?\n" +
+                "  Laeuft der OceanServer noch?"
             );
         }
 
-        System.out.println("<<< Empfangen: " + response);
+        logger.debug("<<< {}", response);
         return response;
     }
 
     /**
-     * Gibt die vom OceanServer vergebene Ship-ID zurück (z.B. "#1#Explorer-220556").
-     * Nur verfügbar nach erfolgreichem launch().
+     * Gibt die vom OceanServer vergebene Ship-ID zurueck (z.B. "#1#Explorer-220556").
+     * Nur verfuegbar nach erfolgreichem launch().
      *
-     * @return Server-ID oder null wenn noch kein launch() durchgeführt
+     * @return Server-ID oder null wenn noch kein launch() durchgefuehrt
      */
     public String getShipServerId() {
         return shipServerId;
     }
 
     /**
-     * Prüft, ob eine Verbindung besteht.
+     * Prueft, ob eine Verbindung besteht.
      *
      * @return true wenn verbunden
      */

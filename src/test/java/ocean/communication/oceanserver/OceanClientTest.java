@@ -15,42 +15,17 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests für OceanClient.
+ * Tests fuer OceanClient.
  *
- * Da OceanClient einen echten TCP-Server benötigt, starten wir
- * einen minimalen In-Process-Mock-Server in einem separaten Thread.
+ * <pre>
+ * Da OceanClient einen echten TCP-Server benoetigt, wird
+ * ein minimaler In-Process-Mock-Server in einem separaten Thread gestartet.
+ * </pre>
  */
-@DisplayName("OceanClient – TCP-Kommunikation")
+@DisplayName("OceanClient - TCP-Kommunikation")
 class OceanClientTest {
 
     private static final int TEST_PORT = 13001;
-
-    // ──────────────────────────────────────────────────────────────
-    // Hilfsmethode: einen einfachen Mock-Server starten
-    // ──────────────────────────────────────────────────────────────
-
-    /** Startet einen einmaligen Mock-Server; schreibt eine Antwort nach der ersten Zeile. */
-    private Thread startMockServer(int port, Runnable handler) throws Exception {
-        CountDownLatch ready = new CountDownLatch(1);
-        Thread t = new Thread(() -> {
-            try (ServerSocket ss = new ServerSocket(port)) {
-                ready.countDown();
-                try (Socket client = ss.accept()) {
-                    handler.run();
-                    // Streams via Closure nutzen – Lambda kann nicht, deshalb Field
-                    // → Wir übergeben über einen shared array-trick
-                }
-            } catch (Exception ignored) {}
-        });
-        t.setDaemon(true);
-        t.start();
-        ready.await(3, TimeUnit.SECONDS);
-        return t;
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // isConnected() – ohne echten Server
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("isConnected() liefert false vor connect()")
@@ -66,20 +41,15 @@ class OceanClientTest {
         assertNull(client.getShipServerId());
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // connect() + disconnect() gegen einen Mini-Server
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("connect() stellt Verbindung her; isConnected() danach true")
     void testConnect() throws Exception {
         int port = TEST_PORT + 1;
-        // Einfacher Server der sofort die Verbindung akzeptiert und hält
         ServerSocket ss = new ServerSocket(port);
         Thread serverThread = new Thread(() -> {
             try {
                 Socket s = ss.accept();
-                Thread.sleep(3000); // Verbindung offen halten
+                Thread.sleep(3000);
                 s.close();
             } catch (Exception ignored) {}
         });
@@ -101,7 +71,6 @@ class OceanClientTest {
         Thread serverThread = new Thread(() -> {
             try {
                 Socket s = ss.accept();
-                // Liest eine Zeile (exit-Befehl) und schließt dann
                 new BufferedReader(new InputStreamReader(s.getInputStream())).readLine();
                 s.close();
             } catch (Exception ignored) {}
@@ -116,16 +85,11 @@ class OceanClientTest {
         ss.close();
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // navigate() – Mock-Server liefert move2d-Antwort
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("navigate() parst move2d-Antwort korrekt")
     void testNavigate() throws Exception {
         int port = TEST_PORT + 3;
 
-        // Erwartete Antwort vom Server
         JSONObject move2d = new JSONObject();
         move2d.put("cmd", "move2d");
         move2d.put("sector", new Vec2D(5, 6).toJson());
@@ -137,8 +101,8 @@ class OceanClientTest {
                 Socket s = ss.accept();
                 BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
                 PrintWriter out  = new PrintWriter(s.getOutputStream(), true);
-                in.readLine();           // navigate-Befehl lesen
-                out.println(move2d);     // move2d senden
+                in.readLine();
+                out.println(move2d);
                 Thread.sleep(500);
                 s.close();
             } catch (Exception ignored) {}
@@ -159,16 +123,11 @@ class OceanClientTest {
         assertEquals(1, result.direction().getY());
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // radar() – Mock-Server liefert radarresponse
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("radar() parst radarresponse mit Echos korrekt")
     void testRadar() throws Exception {
         int port = TEST_PORT + 4;
 
-        // 2 RadarEchos aufbauen
         JSONObject echo1 = new JSONObject();
         echo1.put("sector", new Vec2D(1, 2).toJson());
         echo1.put("ground", "Water");
@@ -215,10 +174,6 @@ class OceanClientTest {
         assertEquals(5,            result.get(1).getHeight());
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // scan() – Mock-Server liefert scanned-Antwort
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("scan() parst scanned-Antwort korrekt")
     void testScan() throws Exception {
@@ -255,12 +210,8 @@ class OceanClientTest {
         assertEquals(12.5f, result.getStandardDeviation(), 0.01f);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // Fehlerfälle
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("connect() wirft IOException wenn kein Server läuft")
+    @DisplayName("connect() wirft IOException wenn kein Server laeuft")
     void testConnectNoServer() {
         OceanClient client = new OceanClient("localhost", 19999);
         assertThrows(IOException.class, client::connect);
@@ -273,7 +224,7 @@ class OceanClientTest {
 
         JSONObject errorResponse = new JSONObject();
         errorResponse.put("cmd",   "error");
-        errorResponse.put("error", "Ungültiger Befehl");
+        errorResponse.put("error", "Ungueltiger Befehl");
 
         ServerSocket ss = new ServerSocket(port);
         Thread serverThread = new Thread(() -> {
@@ -296,7 +247,6 @@ class OceanClientTest {
         client.disconnect();
         ss.close();
 
-        assertNull(result, "Bei Fehler-Antwort soll navigate() null zurückgeben");
+        assertNull(result, "Bei Fehler-Antwort soll navigate() null zurueckgeben");
     }
 }
-

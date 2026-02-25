@@ -15,11 +15,11 @@ import java.util.List;
 import static org.jooq.impl.DSL.*;
 
 /**
- * Repository für Ship-Datenbank-Operationen.
+ * Repository fuer Ship-Datenbank-Operationen.
  *
- * Speichert und lädt Schiffsdaten aus der Datenbank.
- *
- * @author OceanExplorer Team
+ * <pre>
+ * Speichert und laedt Schiffsdaten aus der Datenbank.
+ * </pre>
  */
 public class ShipRepository {
 
@@ -43,7 +43,6 @@ public class ShipRepository {
         Vec2D pos = ship.getPosition();
         Vec2D dir = ship.getDirection();
 
-        // INSERT via jOOQ (kein returning() / getGeneratedKeys() – nicht zuverlässig über exec-maven Classloader)
         dsl.insertInto(table("ship"))
                 .columns(
                         field("name"),
@@ -63,25 +62,24 @@ public class ShipRepository {
                 )
                 .execute();
 
-        // ID per SELECT by name holen – name ist UNIQUE, daher eindeutig
         Record idRecord = dsl.select(field("id"))
                 .from(table("ship"))
                 .where(field("name").eq(ship.getName()))
                 .fetchOne();
 
         if (idRecord == null) {
-            throw new RuntimeException("Schiff konnte nicht gespeichert werden – SELECT nach INSERT lieferte kein Ergebnis");
+            throw new RuntimeException("Schiff konnte nicht gespeichert werden - SELECT nach INSERT lieferte kein Ergebnis");
         }
         long id = idRecord.get(field("id", Long.class));
-        logger.info("✅ Schiff gespeichert: {} (ID: {})", ship.getName(), id);
+        logger.info("Schiff gespeichert: {} (ID: {})", ship.getName(), id);
         return id;
     }
 
     /**
      * Aktualisiert Position und Richtung eines Schiffs.
      *
-     * @param shipName Name des Schiffs
-     * @param position Neue Position
+     * @param shipName  Name des Schiffs
+     * @param position  Neue Position
      * @param direction Neue Richtung
      */
     public void updatePosition(String shipName, Vec2D position, Vec2D direction) {
@@ -103,7 +101,7 @@ public class ShipRepository {
     }
 
     /**
-     * Lädt ein Schiff nach Name aus der Datenbank.
+     * Laedt ein Schiff nach Name aus der Datenbank.
      *
      * @param name Name des Schiffs
      * @return Ship oder null wenn nicht gefunden
@@ -122,7 +120,7 @@ public class ShipRepository {
     }
 
     /**
-     * Lädt alle aktiven Schiffe.
+     * Laedt alle aktiven Schiffe.
      *
      * @return Liste aller Schiffe
      */
@@ -147,21 +145,20 @@ public class ShipRepository {
      * @return Ship-Objekt
      */
     private Ship mapToShip(Record record) {
-        String name = record.get(field("name", String.class));
-        Integer posX = record.get(field("current_x", Integer.class));
-        Integer posY = record.get(field("current_y", Integer.class));
+        String  name = record.get(field("name",        String.class));
+        Integer posX = record.get(field("current_x",   Integer.class));
+        Integer posY = record.get(field("current_y",   Integer.class));
         Integer dirX = record.get(field("direction_x", Integer.class));
         Integer dirY = record.get(field("direction_y", Integer.class));
 
-        Vec2D position = (posX != null && posY != null) ? new Vec2D(posX, posY) : null;
+        Vec2D position  = (posX != null && posY != null) ? new Vec2D(posX, posY) : null;
         Vec2D direction = (dirX != null && dirY != null) ? new Vec2D(dirX, dirY) : null;
 
-        // Ship-Konstruktor: Ship(String name, Vec2D position, Vec2D direction)
         return new Ship(name, position, direction);
     }
 
     /**
-     * Lädt die Schiffs-ID nach Name.
+     * Laedt die Schiffs-ID nach Name.
      *
      * @param name Schiffsname
      * @return ID oder null wenn nicht gefunden

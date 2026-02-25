@@ -19,7 +19,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ScanRepository – Scan- und Positions-Persistierung")
+@DisplayName("ScanRepository - Scan- und Positions-Persistierung")
 class ScanRepositoryTest {
 
     @Mock private DatabaseConnection mockDb;
@@ -34,7 +34,6 @@ class ScanRepositoryTest {
         lenient().when(mockDb.getDSL()).thenReturn(mockDsl);
     }
 
-    /** Reusable: stub the getOrCreateSector() chain → returns sectorId */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void stubSectorLookup(long sectorId) {
         when(mockDsl.select(any(Field.class))).thenReturn(selectSelectStep);
@@ -45,12 +44,8 @@ class ScanRepositoryTest {
         when(sectorIdRecord.get(any(Field.class))).thenReturn(sectorId);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // saveScan()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("saveScan() führt INSERT aus wenn Sektor bereits vorhanden")
+    @DisplayName("saveScan() fuehrt INSERT aus wenn Sektor bereits vorhanden")
     @SuppressWarnings({"unchecked", "rawtypes"})
     void testSaveScanWithExistingSector() {
         stubSectorLookup(3L);
@@ -62,12 +57,8 @@ class ScanRepositoryTest {
         verify(mockDsl).insertInto(any(Table.class));
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // savePosition()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("savePosition() führt INSERT aus wenn Sektor vorhanden")
+    @DisplayName("savePosition() fuehrt INSERT aus wenn Sektor vorhanden")
     @SuppressWarnings({"unchecked", "rawtypes"})
     void testSavePosition() {
         stubSectorLookup(5L);
@@ -79,10 +70,6 @@ class ScanRepositoryTest {
         );
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // findScansByShip()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("findScansByShip() liefert leere Liste wenn keine Ergebnisse")
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -90,7 +77,6 @@ class ScanRepositoryTest {
         Result<Record> emptyResult = mock(Result.class);
         when(emptyResult.iterator()).thenReturn(List.<Record>of().iterator());
 
-        // orderBy() returns SelectSeekStep1 at runtime – use RETURNS_DEEP_STUBS
         SelectConditionStep deepCond = mock(SelectConditionStep.class, RETURNS_DEEP_STUBS);
         when(mockDsl.select()).thenReturn(selectSelectStep);
         when(selectSelectStep.from(any(Table.class))).thenReturn(selectJoinStep);
@@ -100,9 +86,37 @@ class ScanRepositoryTest {
         assertTrue(new ScanRepository(mockDb).findScansByShip(1L).isEmpty());
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // DTO Records
-    // ──────────────────────────────────────────────────────────────
+    @Test
+    @DisplayName("findAllScans() liefert leere Liste wenn keine Ergebnisse")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void testFindAllScansEmpty() {
+        Result<Record> emptyResult = mock(Result.class);
+        when(emptyResult.iterator()).thenReturn(List.<Record>of().iterator());
+
+        SelectJoinStep deepJoin = mock(SelectJoinStep.class, RETURNS_DEEP_STUBS);
+        when(mockDsl.select()).thenReturn(selectSelectStep);
+        when(selectSelectStep.from(any(Table.class))).thenReturn(deepJoin);
+        when(deepJoin.orderBy(any(OrderField.class)).fetch()).thenReturn(emptyResult);
+
+        assertTrue(new ScanRepository(mockDb).findAllScans().isEmpty());
+    }
+
+    @Test
+    @DisplayName("findAllScans() verwendet select() auf DSL")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void testFindAllScansCallsOrderBy() {
+        Result<Record> emptyResult = mock(Result.class);
+        when(emptyResult.iterator()).thenReturn(List.<Record>of().iterator());
+
+        SelectJoinStep deepJoin = mock(SelectJoinStep.class, RETURNS_DEEP_STUBS);
+        when(mockDsl.select()).thenReturn(selectSelectStep);
+        when(selectSelectStep.from(any(Table.class))).thenReturn(deepJoin);
+        when(deepJoin.orderBy(any(OrderField.class)).fetch()).thenReturn(emptyResult);
+
+        new ScanRepository(mockDb).findAllScans();
+
+        verify(mockDsl).select();
+    }
 
     @Test
     @DisplayName("ScanData Record speichert alle Felder korrekt")

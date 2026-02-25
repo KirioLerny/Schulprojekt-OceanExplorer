@@ -13,11 +13,10 @@ import java.net.http.HttpResponse;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("PhotoApiServer – REST-Endpunkte")
+@DisplayName("PhotoApiServer - REST-Endpunkte")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class PhotoApiServerTest {
 
@@ -25,19 +24,16 @@ class PhotoApiServerTest {
 
     private PhotoApiServer server;
     private HttpClient http;
-    /** Zufälliger freier Port – Javalin 0 → OS wählt Port */
     private int port;
 
     @BeforeEach
     void startServer() throws Exception {
-        // Freien Port finden
         try (var ss = new java.net.ServerSocket(0)) {
             port = ss.getLocalPort();
         }
         server = new PhotoApiServer(mockPhotoRepo, port);
         server.start();
         http = HttpClient.newHttpClient();
-        // kurz warten bis Javalin hochgefahren ist
         Thread.sleep(300);
     }
 
@@ -53,10 +49,6 @@ class PhotoApiServerTest {
         return http.send(req, HttpResponse.BodyHandlers.ofString());
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // Konstruktor / Konstante
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("DEFAULT_PORT hat den Wert 8080")
     void testDefaultPort() {
@@ -68,10 +60,6 @@ class PhotoApiServerTest {
     void testConstructorNoException() {
         assertDoesNotThrow(() -> new PhotoApiServer(mockPhotoRepo, 0));
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // GET /api/photos
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("GET /api/photos liefert 200 und leeres JSON-Array bei leerer DB")
@@ -91,10 +79,6 @@ class PhotoApiServerTest {
         assertEquals(200, resp.statusCode());
         assertTrue(resp.body().contains("Sub-A"));
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // GET /api/photos/{id}
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("GET /api/photos/{id} liefert 404 wenn Foto nicht gefunden")
@@ -125,10 +109,6 @@ class PhotoApiServerTest {
         assertEquals(400, resp.statusCode());
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // GET /api/submarines/{id}/photos
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("GET /api/submarines/{id}/photos liefert 200 und leeres Array")
     void testGetSubmarinePhotosEmpty() throws Exception {
@@ -139,15 +119,11 @@ class PhotoApiServerTest {
     }
 
     @Test
-    @DisplayName("GET /api/submarines/{id}/photos liefert 400 bei ungültiger ID")
+    @DisplayName("GET /api/submarines/{id}/photos liefert 400 bei ungueltiger ID")
     void testGetSubmarinePhotosInvalidId() throws Exception {
         var resp = get("/api/submarines/xyz/photos");
         assertEquals(400, resp.statusCode());
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // GET / und /gallery
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("GET / liefert 200 und HTML mit Seitentitel")

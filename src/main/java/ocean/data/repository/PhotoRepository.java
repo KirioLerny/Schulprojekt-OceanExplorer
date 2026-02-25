@@ -11,12 +11,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Repository für Submarine-Fotos.
+ * Repository fuer Submarine-Fotos.
  *
- * Liest Fotos aus der Datenbank – wird vom REST-Webservice genutzt
- * damit die Fotos im Browser angesehen werden können.
- *
- * @author OceanExplorer Team
+ * <pre>
+ * Liest Fotos aus der Datenbank. Wird vom REST-Webservice genutzt,
+ * damit die Fotos im Browser angesehen werden koennen.
+ * </pre>
  */
 public class PhotoRepository {
 
@@ -28,12 +28,8 @@ public class PhotoRepository {
         this.dsl = dbConnection.getDSL();
     }
 
-    // =========================================================
-    // DTO
-    // =========================================================
-
     /**
-     * Metadaten eines Fotos (ohne Blob-Inhalt) – für Listen-Endpunkte.
+     * Metadaten eines Fotos (ohne Blob-Inhalt) fuer Listen-Endpunkte.
      */
     public record PhotoMeta(
             long id,
@@ -44,17 +40,12 @@ public class PhotoRepository {
             String timestamp
     ) {}
 
-    // =========================================================
-    // LESE-OPERATIONEN
-    // =========================================================
-
     /**
-     * Gibt alle Foto-Metadaten zurück (ohne Bild-Blob).
+     * Gibt alle Foto-Metadaten zurueck (ohne Bild-Blob).
      *
      * @return Liste aller Fotos
      */
     public List<PhotoMeta> findAllMeta() {
-        // Raw SQL JOIN – zuverlässigster Weg ohne jOOQ-Codegen bei aliased columns
         var records = dsl.fetch(
             "SELECT p.id, p.dive_id, s.name AS submarine_name, " +
             "p.x, p.y, p.z, p.dir_x, p.dir_y, p.dir_z, p.timestamp " +
@@ -72,7 +63,7 @@ public class PhotoRepository {
     }
 
     /**
-     * Gibt alle Foto-Metadaten eines bestimmten Submarines zurück.
+     * Gibt alle Foto-Metadaten eines bestimmten Submarines zurueck.
      *
      * @param submarineId DB-ID des Submarines
      * @return Liste der Fotos des Submarines
@@ -97,7 +88,7 @@ public class PhotoRepository {
     }
 
     /**
-     * Gibt die rohen PNG-Bytes eines Fotos zurück.
+     * Gibt die rohen PNG-Bytes eines Fotos zurueck.
      *
      * @param photoId DB-ID des Fotos
      * @return PNG-Bytes oder null wenn nicht gefunden
@@ -115,10 +106,6 @@ public class PhotoRepository {
         return r.get("photo_data", byte[].class);
     }
 
-    // =========================================================
-    // HILFSMETHODEN
-    // =========================================================
-
     private PhotoMeta mapMeta(Record r) {
         Timestamp ts = r.get("timestamp", Timestamp.class);
         return new PhotoMeta(
@@ -135,4 +122,3 @@ public class PhotoRepository {
         );
     }
 }
-

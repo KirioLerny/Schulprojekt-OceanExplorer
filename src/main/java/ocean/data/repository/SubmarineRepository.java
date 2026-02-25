@@ -19,9 +19,7 @@ import static org.jooq.impl.DSL.*;
 /**
  * Repository für Submarine-Datenbank-Operationen.
  *
- * Speichert Submarine-Metadaten, Tauchgänge, 3D-Messpunkte und Fotos.
- *
- * @author OceanExplorer Team
+ * Speichert Submarine-Metadaten, Tauchgaenge, 3D-Messpunkte und Fotos.
  */
 public class SubmarineRepository {
 
@@ -33,10 +31,6 @@ public class SubmarineRepository {
         this.dsl = dbConnection.getDSL();
     }
 
-    // =========================================================
-    // SUBMARINE
-    // =========================================================
-
     /**
      * Speichert ein neues Submarine in der Datenbank.
      *
@@ -47,7 +41,6 @@ public class SubmarineRepository {
     public long saveSubmarine(String submarineName, long shipId) {
         logger.debug("Speichere Submarine: {}", submarineName);
 
-        // Versuche INSERT – bei Duplicate Key machen wir stattdessen ein UPDATE
         try {
             dsl.execute(
                 "INSERT INTO submarine (name, ship_id, active) VALUES (?, ?, 1) " +
@@ -55,7 +48,6 @@ public class SubmarineRepository {
                 submarineName, shipId, shipId
             );
         } catch (Exception e) {
-            // Fallback: falls ON DUPLICATE KEY nicht greift, update direkt
             logger.warn("INSERT fehlgeschlagen ({}), versuche UPDATE...", e.getMessage());
             dsl.execute(
                 "UPDATE submarine SET active = 1, ship_id = ? WHERE name = ?",
@@ -72,7 +64,7 @@ public class SubmarineRepository {
             throw new RuntimeException("Submarine konnte nicht gespeichert werden");
         }
         long id = r.get(field("id", Long.class));
-        logger.info("✅ Submarine gespeichert/reaktiviert: {} (ID: {})", submarineName, id);
+        logger.info("Submarine gespeichert/reaktiviert: {} (ID: {})", submarineName, id);
         return id;
     }
 
@@ -89,10 +81,6 @@ public class SubmarineRepository {
         logger.debug("Submarine {} deaktiviert", submarineId);
     }
 
-    // =========================================================
-    // DIVE (Tauchgang)
-    // =========================================================
-
     /**
      * Startet einen neuen Tauchgang.
      *
@@ -100,7 +88,7 @@ public class SubmarineRepository {
      * @return Datenbank-ID des Tauchgangs
      */
     public long startDive(long submarineId) {
-        logger.debug("Starte Tauchgang für Submarine {}", submarineId);
+        logger.debug("Starte Tauchgang fuer Submarine {}", submarineId);
 
         dsl.insertInto(table("submarine_dive"))
                 .columns(field("submarine_id"), field("status"))
@@ -118,7 +106,7 @@ public class SubmarineRepository {
             throw new RuntimeException("Tauchgang konnte nicht gespeichert werden");
         }
         long id = r.get(field("id", Long.class));
-        logger.info("✅ Tauchgang gestartet (ID: {})", id);
+        logger.info("Tauchgang gestartet (ID: {})", id);
         return id;
     }
 
@@ -137,10 +125,6 @@ public class SubmarineRepository {
         logger.info("Tauchgang {} beendet mit Status: {}", diveId, status);
     }
 
-    // =========================================================
-    // MESSPUNKTE
-    // =========================================================
-
     /**
      * Speichert einen 3D-Messpunkt.
      *
@@ -150,7 +134,6 @@ public class SubmarineRepository {
      * @param z         Z-Koordinate (Tiefe, negativ)
      */
     public void saveMeasurementPoint(long diveId, int x, int y, int z) {
-        // INSERT IGNORE: Jeder Punkt nur einmal speichern (UNIQUE x,y,z laut context.md)
         dsl.execute(
             "INSERT IGNORE INTO submarine_measurement_point (dive_id, x, y, z) VALUES (?, ?, ?, ?)",
             diveId, x, y, z
@@ -168,12 +151,8 @@ public class SubmarineRepository {
         for (int[] p : points) {
             saveMeasurementPoint(diveId, p[0], p[1], p[2]);
         }
-        logger.debug("✅ {} Messpunkte gespeichert", points.size());
+        logger.debug("{} Messpunkte gespeichert", points.size());
     }
-
-    // =========================================================
-    // FOTO
-    // =========================================================
 
     /**
      * Speichert ein PNG-Foto als BLOB inkl. Position und Richtung des Submarines.
@@ -188,7 +167,7 @@ public class SubmarineRepository {
      * @param dirZ      Richtung Z
      */
     public void savePhoto(long diveId, byte[] photoData, int x, int y, int z, int dirX, int dirY, int dirZ) {
-        logger.debug("Speichere Foto ({} Bytes) für Tauchgang {} pos=({},{},{})", photoData.length, diveId, x, y, z);
+        logger.debug("Speichere Foto ({} Bytes) fuer Tauchgang {} pos=({},{},{})", photoData.length, diveId, x, y, z);
 
         dsl.insertInto(table("submarine_photo"))
                 .columns(
@@ -201,12 +180,8 @@ public class SubmarineRepository {
                 .values(diveId, photoData, "PNG", x, y, z, dirX, dirY, dirZ)
                 .execute();
 
-        logger.info("✅ Foto gespeichert ({} Bytes)", photoData.length);
+        logger.info("Foto gespeichert ({} Bytes)", photoData.length);
     }
-
-    // =========================================================
-    // UNFALL
-    // =========================================================
 
     /**
      * Speichert einen Unfall in der Datenbank.
@@ -231,11 +206,9 @@ public class SubmarineRepository {
                 .execute();
     }
 
-    // =========================================================
-    // READ METHODS (für WebApp / REST API)
-    // =========================================================
-
-    /** DTO für Submarine-Metadaten. */
+    /**
+     * DTO fuer Submarine-Metadaten.
+     */
     public record SubmarineInfo(
             long id,
             String name,
@@ -243,11 +216,16 @@ public class SubmarineRepository {
             boolean active
     ) {}
 
-    /** DTO für 3D-Messpunkte. */
+    /**
+     * DTO fuer 3D-Messpunkte.
+     */
     public record MeasurementInfo(int x, int y, int z) {}
 
     /**
-     * Alle Submarines eines Schiffs.
+     * Gibt alle Submarines eines Schiffs zurueck.
+     *
+     * @param shipId DB-ID des Schiffs
+     * @return Liste der Submarine-Metadaten
      */
     public List<SubmarineInfo> findByShip(long shipId) {
         var records = dsl.fetch(
@@ -268,7 +246,9 @@ public class SubmarineRepository {
     }
 
     /**
-     * Alle Submarines.
+     * Gibt alle Submarines zurueck.
+     *
+     * @return Liste aller Submarine-Metadaten
      */
     public List<SubmarineInfo> findAll() {
         var records = dsl.fetch(
@@ -288,7 +268,9 @@ public class SubmarineRepository {
     }
 
     /**
-     * Alle 3D-Messpunkte (distinct x,y,z).
+     * Gibt alle 3D-Messpunkte zurueck (distinct x, y, z).
+     *
+     * @return Liste aller Messpunkte
      */
     public List<MeasurementInfo> findAllMeasurements() {
         var records = dsl.fetch(

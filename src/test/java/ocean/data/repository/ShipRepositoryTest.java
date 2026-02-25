@@ -19,7 +19,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ShipRepository – Schiffsdaten speichern und laden")
+@DisplayName("ShipRepository - Schiffsdaten speichern und laden")
 class ShipRepositoryTest {
 
     @Mock private DatabaseConnection mockDb;
@@ -35,17 +35,12 @@ class ShipRepositoryTest {
         lenient().when(mockDb.getDSL()).thenReturn(mockDsl);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // save()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("save() führt INSERT und anschließendes SELECT aus")
+    @DisplayName("save() fuehrt INSERT und anschliessendes SELECT aus")
     @SuppressWarnings({"unchecked", "rawtypes"})
     void testSaveExecutesInsertAndSelect() {
         Ship ship = new Ship("Explorer", new Vec2D(10, 20), new Vec2D(0, 1));
 
-        // RETURNS_DEEP_STUBS handles the full .columns(...).values(...).execute() chain
         InsertSetStep insertMock = mock(InsertSetStep.class, RETURNS_DEEP_STUBS);
         when(mockDsl.insertInto(any(Table.class))).thenReturn(insertMock);
 
@@ -60,10 +55,6 @@ class ShipRepositoryTest {
         assertEquals(99L, id);
         verify(mockDsl).insertInto(any(Table.class));
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // findByName()
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("findByName() liefert null wenn kein Record gefunden")
@@ -84,8 +75,6 @@ class ShipRepositoryTest {
         when(selectJoinStep.where(any(Condition.class))).thenReturn(selectConditionStep);
         when(selectConditionStep.fetchOne()).thenReturn(shipRecord);
 
-        // mapToShip calls record.get(field("fieldName", Type.class)) – single-arg Field<T>
-        // Use doAnswer to inspect the Field's name and return the right type
         doAnswer(inv -> {
             Field<?> f = inv.getArgument(0);
             String name = f.getName();
@@ -103,10 +92,6 @@ class ShipRepositoryTest {
         assertNotNull(result.getPosition());
         assertNotNull(result.getDirection());
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // getIdByName()
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("getIdByName() liefert null wenn Schiff nicht gefunden")
@@ -131,12 +116,8 @@ class ShipRepositoryTest {
         assertEquals(7L, new ShipRepository(mockDb).getIdByName("Explorer"));
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // updatePosition()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("updatePosition() führt UPDATE-Query aus")
+    @DisplayName("updatePosition() fuehrt UPDATE-Query aus")
     @SuppressWarnings({"unchecked", "rawtypes"})
     void testUpdatePosition() {
         UpdateSetFirstStep updateStep = mock(UpdateSetFirstStep.class, RETURNS_DEEP_STUBS);
@@ -147,10 +128,6 @@ class ShipRepositoryTest {
         );
         verify(mockDsl).update(any(Table.class));
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // findAll()
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("findAll() liefert leere Liste wenn keine aktiven Schiffe vorhanden")

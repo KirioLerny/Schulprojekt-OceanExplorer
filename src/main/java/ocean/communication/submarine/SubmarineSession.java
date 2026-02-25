@@ -18,23 +18,22 @@ import java.util.List;
 /**
  * Verwaltet die Kommunikation mit einem einzelnen Submarine.
  *
- * Das Submarine sendet nach JEDER Aktion ein neues "ready" –
- * wir antworten jeweils mit dem nächsten pilot-Schritt (State-Machine).
+ * <pre>
+ * Das Submarine sendet nach JEDER Aktion ein neues "ready".
+ * Die Session antwortet jeweils mit dem naechsten pilot-Schritt (State-Machine).
  *
  * Ablauf:
- *   ready (Schritt 0) → pilot DOWN None   → taucht ab
- *   ready (Schritt 1) → pilot C measure   → Submarine sendet "measure"
- *   ready (Schritt 2) → pilot C picture   → Submarine sendet "picture"
- *   ready (Schritt 3) → pilot UP None     → taucht auf
- *   ready (Schritt 4) → pilot UP arise    → Submarine sendet "arise"
- *
- * @author OceanExplorer Team
+ *   ready (Schritt 0)  pilot DOWN None    taucht ab
+ *   ready (Schritt 1)  pilot C measure    Submarine sendet "measure"
+ *   ready (Schritt 2)  pilot C picture    Submarine sendet "picture"
+ *   ready (Schritt 3)  pilot UP None      taucht auf
+ *   ready (Schritt 4)  pilot UP arise     Submarine sendet "arise"
+ * </pre>
  */
 public class SubmarineSession extends Thread {
 
     private static final Logger logger = LoggerFactory.getLogger(SubmarineSession.class);
 
-    /** Pilot-Sequenz: [route, action] */
     private static final String[][] PILOT_STEPS = {
         {"DOWN", "None"},
         {"C",    "measure"},
@@ -54,10 +53,8 @@ public class SubmarineSession extends Thread {
     private long diveId        = -1;
     private String submarineId = "unknown";
 
-    /** Welcher Pilot-Schritt als nächstes gesendet werden soll */
     private int pilotStep = 0;
 
-    /** Optionaler Callback – wird aufgerufen wenn die Session beendet ist */
     private Runnable onFinished;
 
     public void setOnFinished(Runnable onFinished) {
@@ -108,7 +105,7 @@ public class SubmarineSession extends Thread {
         try {
             json = new JSONObject(raw);
         } catch (Exception e) {
-            logger.warn("Ungültiges JSON vom Submarine: {}", raw);
+            logger.warn("Ungueltiges JSON vom Submarine: {}", raw);
             return;
         }
         switch (json.optString("cmd", "")) {
@@ -122,15 +119,15 @@ public class SubmarineSession extends Thread {
     }
 
     /**
-     * Submarine sendet "ready" nach jeder ausgeführten Aktion.
-     * Beim ersten ready: in DB anlegen + Tauchgang starten.
-     * Bei allen readys: nächsten Pilot-Schritt senden.
+     * Submarine sendet "ready" nach jeder ausgefuehrten Aktion.
+     * Beim ersten ready: in DB anlegen und Tauchgang starten.
+     * Bei allen readys: naechsten Pilot-Schritt senden.
      */
     private void handleReady(JSONObject json) {
         submarineId = json.optString("id", "unknown");
 
         if (pilotStep == 0) {
-            logger.info("=== Submarine initialisiert: {} ===", submarineId);
+            logger.info("Submarine initialisiert: {}", submarineId);
             try {
                 submarineDbId = subRepo.saveSubmarine(submarineId, shipId);
             } catch (Exception e) {
@@ -149,11 +146,13 @@ public class SubmarineSession extends Thread {
             sendPilot(route, action);
             pilotStep++;
         } else {
-            logger.debug("Alle Pilot-Schritte gesendet – warte auf arise/crash");
+            logger.debug("Alle Pilot-Schritte gesendet - warte auf arise/crash");
         }
     }
 
-    /** 3D-Messpunkte empfangen und speichern */
+    /**
+     * 3D-Messpunkte empfangen und speichern.
+     */
     private void handleMeasure(JSONObject json) {
         JSONArray measurement = json.optJSONArray("vecs");
         if (measurement == null) {
@@ -169,13 +168,15 @@ public class SubmarineSession extends Thread {
         }
         if (diveId >= 0) {
             subRepo.saveMeasurementPoints(diveId, points);
-            logger.info("✅ {} Messpunkte gespeichert ({})", points.size(), submarineId);
+            logger.info("{} Messpunkte gespeichert ({})", points.size(), submarineId);
         } else {
-            logger.warn("Messpunkte ohne aktiven Tauchgang – ignoriert");
+            logger.warn("Messpunkte ohne aktiven Tauchgang - ignoriert");
         }
     }
 
-    /** PNG-Foto (Hex-kodiert) empfangen und als BLOB speichern */
+    /**
+     * PNG-Foto (Hex-kodiert) empfangen und als BLOB speichern.
+     */
     private void handlePicture(JSONObject json) {
         String pictureHex = json.optString("picture", "");
         if (pictureHex.isEmpty() || pictureHex.equals("ERROR")) {
@@ -203,20 +204,22 @@ public class SubmarineSession extends Thread {
             byte[] photoData = hexToBytes(pictureHex);
             if (diveId >= 0) {
                 subRepo.savePhoto(diveId, photoData, px, py, pz, dx, dy, dz);
-                logger.info("✅ Foto gespeichert ({} Bytes, pos=({},{},{}) dir=({},{},{}) {})",
+                logger.info("Foto gespeichert ({} Bytes, pos=({},{},{}) dir=({},{},{}) {})",
                         photoData.length, px, py, pz, dx, dy, dz, submarineId);
             } else {
-                logger.warn("Foto ohne aktiven Tauchgang – ignoriert");
+                logger.warn("Foto ohne aktiven Tauchgang - ignoriert");
             }
         } catch (Exception e) {
             logger.error("Fehler beim Speichern des Fotos: {}", e.getMessage());
         }
     }
 
-    /** Unfall – Tauchgang als CRASHED beenden */
+    /**
+     * Unfall - Tauchgang als CRASHED beenden.
+     */
     private void handleCrash(JSONObject json) {
         String message = json.optString("message", "Unbekannter Unfall");
-        logger.warn("💥 CRASH von {}: {}", submarineId, message);
+        logger.warn("CRASH von {}: {}", submarineId, message);
 
         Vec2D position = new Vec2D(0, 0);
         if (json.has("sector")) {
@@ -235,15 +238,17 @@ public class SubmarineSession extends Thread {
             try {
                 subRepo.deactivateSubmarine(submarineDbId);
                 subRepo.saveAccident(shipId, submarineDbId, position, message);
-                logger.warn("✅ Unfall gespeichert");
+                logger.warn("Unfall gespeichert");
             } catch (Exception e) { logger.error("Fehler beim Speichern des Unfalls: {}", e.getMessage()); }
             submarineDbId = -1;
         }
     }
 
-    /** Submarine aufgetaucht – Tauchgang als SURFACED beenden */
+    /**
+     * Submarine aufgetaucht - Tauchgang als SURFACED beenden.
+     */
     private void handleArise(@SuppressWarnings("unused") JSONObject json) {
-        logger.info("✅ Submarine {} aufgetaucht", submarineId);
+        logger.info("Submarine {} aufgetaucht", submarineId);
         if (diveId >= 0) {
             subRepo.endDive(diveId, "SURFACED");
             diveId = -1;

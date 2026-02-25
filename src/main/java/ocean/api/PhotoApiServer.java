@@ -7,20 +7,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * REST-Webservice für den Ocean Explorer.
+ * REST-Webservice fuer den Ocean Explorer.
  *
- * Stellt Fotos und Metadaten der Submarine-Tauchgänge über HTTP bereit.
- * Wird von der Angular WebApp (oder direkt im Browser) genutzt.
+ * <pre>
+ * Stellt Fotos und Metadaten der Submarine-Tauchgaenge ueber HTTP bereit.
+ * Wird von der Angular WebApp oder direkt im Browser genutzt.
  *
- * Endpoints:
- *   GET  /api/photos            – Liste aller Foto-Metadaten (JSON)
- *   GET  /api/photos/{id}       – Einzelnes Foto als PNG (image/png)
- *   GET  /api/submarines/{id}/photos – Fotos eines bestimmten Submarines
- *   GET  /                      – Einfache HTML-Galerie zum Durchklicken
+ * Endpunkte:
+ *   GET  /api/photos                    Liste aller Foto-Metadaten (JSON)
+ *   GET  /api/photos/{id}               Einzelnes Foto als PNG (image/png)
+ *   GET  /api/submarines/{id}/photos    Fotos eines bestimmten Submarines
+ *   GET  /                              Einfache HTML-Galerie zum Durchklicken
  *
- * Läuft standardmäßig auf Port 8080.
- *
- * @author OceanExplorer Team
+ * Laeuft standardmaessig auf Port 8080.
+ * </pre>
  */
 public class PhotoApiServer {
 
@@ -44,34 +44,21 @@ public class PhotoApiServer {
 
     private Javalin buildApp() {
         Javalin javalin = Javalin.create(config -> {
-            // CORS für Angular-Dev-Server erlauben
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(rule -> rule.anyHost());
             });
             config.useVirtualThreads = true;
         });
 
-        // ── Alle Foto-Metadaten ──────────────────────────────────────────
-        javalin.get("/api/photos", this::handleGetAllPhotos);
-
-        // ── Einzelnes Foto als PNG-Bild ──────────────────────────────────
-        javalin.get("/api/photos/{id}", this::handleGetPhotoImage);
-
-        // ── Fotos eines bestimmten Submarines ───────────────────────────
-        javalin.get("/api/submarines/{id}/photos", this::handleGetSubmarinePhotos);
-
-        // ── Einfache HTML-Galerie (kein Angular nötig zum Testen) ────────
-        javalin.get("/", this::handleGallery);
-        javalin.get("/gallery", this::handleGallery);
+        javalin.get("/api/photos",                    this::handleGetAllPhotos);
+        javalin.get("/api/photos/{id}",               this::handleGetPhotoImage);
+        javalin.get("/api/submarines/{id}/photos",    this::handleGetSubmarinePhotos);
+        javalin.get("/",                              this::handleGallery);
+        javalin.get("/gallery",                       this::handleGallery);
 
         return javalin;
     }
 
-    // =========================================================
-    // HANDLER
-    // =========================================================
-
-    /** GET /api/photos → JSON-Liste aller Foto-Metadaten */
     private void handleGetAllPhotos(Context ctx) {
         try {
             var photos = photoRepo.findAllMeta();
@@ -82,7 +69,6 @@ public class PhotoApiServer {
         }
     }
 
-    /** GET /api/photos/{id} → PNG-Bild direkt */
     private void handleGetPhotoImage(Context ctx) {
         String idStr = ctx.pathParam("id");
         try {
@@ -95,14 +81,13 @@ public class PhotoApiServer {
             ctx.contentType("image/png");
             ctx.result(data);
         } catch (NumberFormatException e) {
-            ctx.status(400).result("Ungültige ID: " + idStr);
+            ctx.status(400).result("Ungueltige ID: " + idStr);
         } catch (Exception e) {
             logger.error("Fehler beim Abrufen des Fotos {}: {}", idStr, e.getMessage());
             ctx.status(500).result("Datenbankfehler: " + e.getMessage());
         }
     }
 
-    /** GET /api/submarines/{id}/photos → JSON-Liste der Fotos des Submarines */
     private void handleGetSubmarinePhotos(Context ctx) {
         String idStr = ctx.pathParam("id");
         try {
@@ -110,7 +95,7 @@ public class PhotoApiServer {
             var photos = photoRepo.findBySubmarine(id);
             ctx.json(photos);
         } catch (NumberFormatException e) {
-            ctx.status(400).result("Ungültige ID: " + idStr);
+            ctx.status(400).result("Ungueltige ID: " + idStr);
         } catch (Exception e) {
             logger.error("Fehler: {}", e.getMessage());
             ctx.status(500).result("Datenbankfehler: " + e.getMessage());
@@ -118,9 +103,8 @@ public class PhotoApiServer {
     }
 
     /**
-     * GET / oder /gallery → Einfache HTML-Foto-Galerie.
+     * Rendert eine einfache HTML-Foto-Galerie.
      * Zeigt alle Fotos als anklickbare Thumbnails an.
-     * Kein Angular nötig – funktioniert direkt im Browser.
      */
     private void handleGallery(Context ctx) {
         try {
@@ -133,7 +117,7 @@ public class PhotoApiServer {
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>🌊 Ocean Explorer – Submarine Galerie</title>
+                    <title>Ocean Explorer - Submarine Galerie</title>
                     <style>
                         * { box-sizing: border-box; margin: 0; padding: 0; }
                         body {
@@ -182,9 +166,7 @@ public class PhotoApiServer {
                             display: block;
                             background: #071020;
                         }
-                        .card-info {
-                            padding: 14px 16px;
-                        }
+                        .card-info { padding: 14px 16px; }
                         .card-info .sub  { font-weight: bold; color: #7ec8ff; font-size: 0.95rem; }
                         .card-info .pos  { color: #6aa5cc; font-size: 0.82rem; margin-top: 4px; }
                         .card-info .time { color: #446a8c; font-size: 0.78rem; margin-top: 6px; }
@@ -194,9 +176,6 @@ public class PhotoApiServer {
                             padding: 60px 0;
                             color: #446a8c;
                         }
-                        .empty .icon { font-size: 4rem; margin-bottom: 16px; }
-
-                        /* Lightbox */
                         #lightbox {
                             display: none;
                             position: fixed; inset: 0;
@@ -245,20 +224,19 @@ public class PhotoApiServer {
                 </head>
                 <body>
                 <header>
-                    <h1>🌊 Ocean Explorer – Submarine Galerie</h1>
-                    <p>Aufnahmen der Tauchgänge</p>
+                    <h1>Ocean Explorer - Submarine Galerie</h1>
+                    <p>Aufnahmen der Tauchgaenge</p>
                 </header>
                 <div class="stats">
                 """);
 
-            html.append("📸 ").append(photos.size()).append(" Fotos gespeichert");
+            html.append(photos.size()).append(" Fotos gespeichert");
             html.append("&nbsp;&nbsp;|&nbsp;&nbsp;<a href='/api/photos' style='color:#5ba3d8'>JSON-API</a>");
             html.append("</div>\n<div class='gallery' id='gallery'>\n");
 
             if (photos.isEmpty()) {
                 html.append("""
                     <div class="empty">
-                        <div class="icon">🤿</div>
                         <div>Noch keine Fotos vorhanden.<br>Starte ein Submarine um Aufnahmen zu machen.</div>
                     </div>
                     """);
@@ -270,9 +248,9 @@ public class PhotoApiServer {
                             <img src="/api/photos/%d" alt="Foto %d" loading="lazy"
                                  onerror="this.style.display='none'">
                             <div class="card-info">
-                                <div class="sub">🤿 %s</div>
-                                <div class="pos">📍 Pos: (%d, %d, %d) | Dir: (%d, %d, %d)</div>
-                                <div class="time">🕐 %s</div>
+                                <div class="sub">%s</div>
+                                <div class="pos">Pos: (%d, %d, %d) | Dir: (%d, %d, %d)</div>
+                                <div class="time">%s</div>
                             </div>
                         </div>
                         """,
@@ -280,26 +258,24 @@ public class PhotoApiServer {
                         escapeHtml(p.submarineName()),
                         p.x(), p.y(), p.z(),
                         p.dirX(), p.dirY(), p.dirZ(),
-                        p.timestamp() != null ? p.timestamp() : "–"
+                        p.timestamp() != null ? p.timestamp() : "-"
                     ));
                 }
             }
 
             html.append("</div>\n");
 
-            // Lightbox + Navigation
             html.append("""
                 <div id="lightbox">
-                    <button class="close-btn" onclick="closeLightbox()">✕</button>
-                    <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">‹</button>
+                    <button class="close-btn" onclick="closeLightbox()">X</button>
+                    <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&lsaquo;</button>
                     <img id="lb-img" src="" alt="">
                     <div class="lb-info" id="lb-info"></div>
-                    <button class="nav-btn" id="next-btn" onclick="navigate(1)">›</button>
+                    <button class="nav-btn" id="next-btn" onclick="navigate(1)">&rsaquo;</button>
                 </div>
                 <script>
                     const photos = """);
 
-            // Foto-IDs als JS-Array
             html.append("[");
             for (int i = 0; i < photos.size(); i++) {
                 if (i > 0) html.append(",");
@@ -331,7 +307,7 @@ public class PhotoApiServer {
                         const p = photos[idx];
                         document.getElementById('lb-img').src = '/api/photos/' + p.id;
                         document.getElementById('lb-info').textContent =
-                            '🤿 ' + p.sub + '  |  📍 ' + p.pos + '  |  🕐 ' + p.time +
+                            p.sub + '  |  ' + p.pos + '  |  ' + p.time +
                             '  (' + (idx+1) + '/' + photos.length + ')';
                     }
                     document.getElementById('lightbox').addEventListener('click', function(e) {
@@ -354,32 +330,32 @@ public class PhotoApiServer {
         }
     }
 
-    // =========================================================
-    // START / STOP
-    // =========================================================
 
-    /** Gibt die interne Javalin-Instanz zurück (für Tests). */
+    /**
+     * Gibt die interne Javalin-Instanz zurueck (fuer Tests).
+     *
+     * @return Javalin-Instanz
+     */
     public Javalin getApp() {
         return app;
     }
 
-    /** Startet den HTTP-Server (blockiert nicht). */
+    /**
+     * Startet den HTTP-Server.
+     */
     public void start() {
         app.start(port);
-        logger.info("=== PhotoApiServer gestartet auf http://localhost:{} ===", port);
-        logger.info("  Galerie:    http://localhost:{}/", port);
-        logger.info("  REST-API:   http://localhost:{}/api/photos", port);
+        logger.info("PhotoApiServer gestartet auf http://localhost:{}", port);
     }
 
-    /** Stoppt den HTTP-Server. */
+    /**
+     * Stoppt den HTTP-Server.
+     */
     public void stop() {
         app.stop();
         logger.info("PhotoApiServer gestoppt.");
     }
 
-    // =========================================================
-    // HILFSMETHODEN
-    // =========================================================
 
     private static String escapeHtml(String s) {
         if (s == null) return "";

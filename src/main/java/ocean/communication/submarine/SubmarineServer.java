@@ -15,17 +15,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * TCP-Server der auf eingehende Submarine-Verbindungen wartet.
  *
- * Läuft im eigenen Daemon-Thread.
- * Für jede neue Submarine-Verbindung wird eine SubmarineSession gestartet.
- * Verwaltet alle aktiven Sessions und ermöglicht Warten bis alle fertig sind.
- *
- * @author OceanExplorer Team
+ * <pre>
+ * Laeuft im eigenen Daemon-Thread.
+ * Fuer jede neue Submarine-Verbindung wird eine SubmarineSession gestartet.
+ * Verwaltet alle aktiven Sessions und ermoeglicht Warten bis alle fertig sind.
+ * </pre>
  */
 public class SubmarineServer extends Thread {
 
     private static final Logger logger = LoggerFactory.getLogger(SubmarineServer.class);
 
-    /** Port auf dem ShipApp auf Submarines wartet */
     public static final int DEFAULT_PORT = 9000;
 
     private final int port;
@@ -36,14 +35,19 @@ public class SubmarineServer extends Thread {
     private ServerSocket serverSocket;
     private volatile boolean running = false;
 
-    /** Zählt wie viele Verbindungen insgesamt akzeptiert wurden */
     private final AtomicInteger acceptedCount = new AtomicInteger(0);
 
-    /** Alle aktiven SubmarineSessions (thread-safe) */
     private final Set<SubmarineSession> activeSessions =
             Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    /** @param maxSessions Maximale Anzahl Submarines die akzeptiert werden (danach Server-Stop) */
+    /**
+     * Erstellt einen SubmarineServer.
+     *
+     * @param port        Port auf dem auf Submarines gewartet wird
+     * @param subRepo     Repository fuer Submarine-Daten
+     * @param shipId      DB-ID des Mutterschiffs
+     * @param maxSessions Maximale Anzahl Submarines die akzeptiert werden
+     */
     public SubmarineServer(int port, SubmarineRepository subRepo, long shipId, int maxSessions) {
         this.port = port;
         this.subRepo = subRepo;
@@ -53,7 +57,13 @@ public class SubmarineServer extends Thread {
         setDaemon(true);
     }
 
-    /** Konstruktor mit Standard-maxSessions (kein Limit = Integer.MAX_VALUE) */
+    /**
+     * Erstellt einen SubmarineServer ohne Submarine-Limit.
+     *
+     * @param port    Port auf dem auf Submarines gewartet wird
+     * @param subRepo Repository fuer Submarine-Daten
+     * @param shipId  DB-ID des Mutterschiffs
+     */
     public SubmarineServer(int port, SubmarineRepository subRepo, long shipId) {
         this(port, subRepo, shipId, Integer.MAX_VALUE);
     }
@@ -63,7 +73,7 @@ public class SubmarineServer extends Thread {
         try {
             serverSocket = new ServerSocket(port);
             running = true;
-            logger.info("=== SubmarineServer gestartet auf Port {} (max. {} Submarines) ===", port, maxSessions);
+            logger.info("SubmarineServer gestartet auf Port {} (max. {} Submarines)", port, maxSessions);
 
             while (running) {
                 try {
@@ -73,13 +83,11 @@ public class SubmarineServer extends Thread {
                             client.getRemoteSocketAddress(), count, maxSessions);
                     SubmarineSession session = new SubmarineSession(client, subRepo, shipId);
                     activeSessions.add(session);
-                    // Session aus der Menge entfernen wenn sie fertig ist
                     session.setOnFinished(() -> activeSessions.remove(session));
                     session.start();
 
-                    // Nach maxSessions keine weiteren Verbindungen annehmen
                     if (count >= maxSessions) {
-                        logger.info("Maximale Submarine-Anzahl ({}) erreicht – schließe Accept-Loop", maxSessions);
+                        logger.info("Maximale Submarine-Anzahl ({}) erreicht - schliesse Accept-Loop", maxSessions);
                         break;
                     }
                 } catch (IOException e) {
@@ -91,7 +99,6 @@ public class SubmarineServer extends Thread {
         } catch (IOException e) {
             logger.error("SubmarineServer konnte nicht starten auf Port {}: {}", port, e.getMessage());
         } finally {
-            // ServerSocket schließen, Sessions laufen weiter
             try {
                 if (serverSocket != null && !serverSocket.isClosed()) serverSocket.close();
             } catch (IOException ignored) {}
@@ -99,9 +106,10 @@ public class SubmarineServer extends Thread {
     }
 
     /**
-     * Wartet bis alle aktiven Sessions beendet sind oder das Timeout abläuft.
+     * Wartet bis alle aktiven Sessions beendet sind oder das Timeout ablaeuft.
      *
      * @param timeoutMs maximale Wartezeit in Millisekunden
+     * @throws InterruptedException wenn der Thread unterbrochen wird
      */
     public void waitForAllSessions(long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
@@ -111,18 +119,23 @@ public class SubmarineServer extends Thread {
             Thread.sleep(2000);
         }
         if (!activeSessions.isEmpty()) {
-            logger.warn("Timeout – {} Session(s) noch aktiv, fahre fort.", activeSessions.size());
+            logger.warn("Timeout - {} Session(s) noch aktiv, fahre fort.", activeSessions.size());
         }
     }
 
-    /** Anzahl aktuell aktiver Sessions */
+    /**
+     * Gibt die Anzahl aktuell aktiver Sessions zurueck.
+     *
+     * @return Anzahl aktiver Sessions
+     */
     public int getActiveSessionCount() {
         return activeSessions.size();
     }
 
     /**
-     * Gibt zurück ob aktuell mindestens ein Submarine taucht.
-     * Solange dies true ist, darf das Schiff den Sektor NICHT wechseln (context.md Regel 2).
+     * Gibt zurueck ob aktuell mindestens ein Submarine taucht.
+     *
+     * @return true wenn mindestens ein Submarine aktiv taucht
      */
     public boolean isDiving() {
         return !activeSessions.isEmpty();
@@ -143,6 +156,11 @@ public class SubmarineServer extends Thread {
         logger.info("SubmarineServer gestoppt.");
     }
 
+    /**
+     * Gibt zurueck ob der Server laeuft.
+     *
+     * @return true wenn laufend
+     */
     public boolean isRunning() {
         return running;
     }

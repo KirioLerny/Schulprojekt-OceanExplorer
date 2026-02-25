@@ -1,14 +1,9 @@
 package ocean.model;
 
-// Fahrtrichtung von Schiffen  
-
-//Alle enums bieten automatisch folgenden Methoden:
-//String name() - Liefert der Enum-Wert als String
-//int ordinal() - Liefert den Enum-Wert als Zahl
-//EnumObj EnumName.valueOf(String name) - wandelt einen String in Enum-Wert um
-
+/**
+ * Fahrtrichtung fuer den Navigate-Befehl am OceanServer.
+ */
 public enum Course {
-	Forward,	// vorwärts fahren 
-	Backward 	// rückwärts fahren 
+    Forward,
+    Backward
 }
-

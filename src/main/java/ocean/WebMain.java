@@ -9,24 +9,20 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 
 /**
- * Einstiegspunkt für die Web-gesteuerte Ocean-Explorer-Variante.
+ * Einstiegspunkt fuer die Web-gesteuerte Ocean-Explorer-Variante.
  *
- * Startet KEINE automatische Navigation – stattdessen werden zwei REST-Server gestartet:
+ * <pre>
+ * Startet keine automatische Navigation. Stattdessen wird ein REST-Server
+ * auf Port 8080 gestartet, ueber den die Angular WebApp alle Operationen
+ * steuert.
  *
- *   Port 8080 – ControlApiServer  (Schiff steuern, Submarines, Daten abrufen)
- *   Port 8080 – PhotoApiServer    (Fotos & Galerie)        ← selbe Javalin-Instanz!
- *
- * Die Angular WebApp (ocean-webapp) kann dann unter http://localhost:4200 laufen
- * und kommuniziert mit dem Backend auf Port 8080.
- *
- * Starten:
+ * Aufruf:
  *   java -cp target/OceanExplorer-1.0-SNAPSHOT-jar-with-dependencies.jar ocean.WebMain [oceanHost]
  *
  * Voraussetzungen:
- *   - MySQL läuft (docker-compose up -d)
- *   - OceanServer läuft (oceanserver.jar)
- *
- * @author OceanExplorer Team
+ *   - MySQL laeuft  (docker-compose up -d)
+ *   - OceanServer laeuft (oceanserver.jar)
+ * </pre>
  */
 public class WebMain {
 
@@ -36,42 +32,35 @@ public class WebMain {
     private static final int    API_PORT           = 8080;
 
     public static void main(String[] args) {
-        logger.info("═══════════════════════════════════════════");
-        logger.info("  Ocean Explorer – Web-Modus");
-        logger.info("  REST API  → http://localhost:{}", API_PORT);
-        logger.info("  Angular   → http://localhost:4200  (ng serve)");
-        logger.info("═══════════════════════════════════════════");
+        logger.info("Ocean Explorer - Web-Modus");
+        logger.info("REST API  -> http://localhost:{}", API_PORT);
+        logger.info("Angular   -> http://localhost:4200  (ng serve)");
 
         String oceanHost = args.length >= 1 ? args[0] : DEFAULT_OCEAN_HOST;
         logger.info("OceanServer-Host: {}", oceanHost);
 
-        DatabaseConnection db = null;
-        ControlApiServer controlApi = null;
+        DatabaseConnection db        = null;
+        ControlApiServer   controlApi = null;
 
         try {
-            // ── Datenbank ────────────────────────────────────────────────
             db = DatabaseConnection.getInstance();
             db.connect();
-            logger.info("✅ Datenbank verbunden");
+            logger.info("Datenbank verbunden");
 
-            ShipRepository       shipRepo  = new ShipRepository(db);
-            ScanRepository       scanRepo  = new ScanRepository(db);
-            SubmarineRepository  subRepo   = new SubmarineRepository(db);
-            PhotoRepository      photoRepo = new PhotoRepository(db);
+            ShipRepository      shipRepo  = new ShipRepository(db);
+            ScanRepository      scanRepo  = new ScanRepository(db);
+            SubmarineRepository subRepo   = new SubmarineRepository(db);
+            PhotoRepository     photoRepo = new PhotoRepository(db);
 
-            // ── ControlApiServer (enthält auch Photo-Endpunkte) ───────────
             controlApi = new ControlApiServer(shipRepo, scanRepo, subRepo, photoRepo, oceanHost, API_PORT);
             controlApi.start();
 
-            logger.info("✅ API bereit – warte auf Anfragen...");
-            logger.info("   Schiff starten: POST http://localhost:{}/api/ship/launch", API_PORT);
-            logger.info("   Fotos:          GET  http://localhost:{}/api/photos",      API_PORT);
-            logger.info("   Galerie:        GET  http://localhost:{}/",                API_PORT);
-            logger.info("   Status:         GET  http://localhost:{}/api/status",      API_PORT);
-            logger.info("");
-            logger.info("Drücke Ctrl+C zum Beenden.");
+            logger.info("API bereit - warte auf Anfragen...");
+            logger.info("Schiff starten: POST http://localhost:{}/api/ship/launch", API_PORT);
+            logger.info("Fotos:          GET  http://localhost:{}/api/photos",      API_PORT);
+            logger.info("Status:         GET  http://localhost:{}/api/status",      API_PORT);
+            logger.info("Druecke Ctrl+C zum Beenden.");
 
-            // Hauptthread schlafen lassen – Server laufen in eigenen Threads
             final ControlApiServer finalApi = controlApi;
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 logger.info("Shutdown...");
@@ -79,14 +68,14 @@ public class WebMain {
                 DatabaseConnection.getInstance().disconnect();
             }));
 
-            Thread.currentThread().join(); // blockiert bis Ctrl+C
+            Thread.currentThread().join();
 
         } catch (SQLException e) {
             logger.error("Datenbankfehler: {}", e.getMessage());
-            logger.error("Läuft MySQL? → docker-compose up -d");
+            logger.error("Laeuft MySQL? -> docker-compose up -d");
             System.exit(1);
         } catch (InterruptedException ignored) {
-            logger.info("Unterbrochen – beende.");
+            logger.info("Unterbrochen - beende.");
         } catch (Exception e) {
             logger.error("Unerwarteter Fehler: {}", e.getMessage(), e);
             System.exit(1);
@@ -96,4 +85,3 @@ public class WebMain {
         }
     }
 }
-

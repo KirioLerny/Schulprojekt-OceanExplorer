@@ -17,7 +17,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("PhotoRepository – Foto-Metadaten lesen")
+@DisplayName("PhotoRepository - Foto-Metadaten lesen")
 class PhotoRepositoryTest {
 
     @Mock private DatabaseConnection mockDb;
@@ -27,10 +27,6 @@ class PhotoRepositoryTest {
     void setUp() {
         lenient().when(mockDb.getDSL()).thenReturn(mockDsl);
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // findAllMeta()
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("findAllMeta() liefert leere Liste wenn keine Fotos vorhanden")
@@ -56,10 +52,10 @@ class PhotoRepositoryTest {
         when(r.get("x",              Integer.class)).thenReturn(5);
         when(r.get("y",              Integer.class)).thenReturn(7);
         when(r.get("z",              Integer.class)).thenReturn(-30);
-        when(r.get("dir_x",         Integer.class)).thenReturn(0);
-        when(r.get("dir_y",         Integer.class)).thenReturn(1);
-        when(r.get("dir_z",         Integer.class)).thenReturn(0);
-        when(r.get("timestamp",     java.sql.Timestamp.class)).thenReturn(null);
+        when(r.get("dir_x",          Integer.class)).thenReturn(0);
+        when(r.get("dir_y",          Integer.class)).thenReturn(1);
+        when(r.get("dir_z",          Integer.class)).thenReturn(0);
+        when(r.get("timestamp",      java.sql.Timestamp.class)).thenReturn(null);
 
         Result<Record> result = mock(Result.class);
         when(result.iterator()).thenReturn(List.of(r).iterator());
@@ -70,20 +66,16 @@ class PhotoRepositoryTest {
 
         assertEquals(1, photos.size());
         PhotoRepository.PhotoMeta meta = photos.get(0);
-        assertEquals(1L,        meta.id());
-        assertEquals(10L,       meta.diveId());
+        assertEquals(1L,          meta.id());
+        assertEquals(10L,         meta.diveId());
         assertEquals("Sub-Alpha", meta.submarineName());
-        assertEquals(5,         meta.x());
-        assertEquals(7,         meta.y());
-        assertEquals(-30,       meta.z());
+        assertEquals(5,           meta.x());
+        assertEquals(7,           meta.y());
+        assertEquals(-30,         meta.z());
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // findBySubmarine()
-    // ──────────────────────────────────────────────────────────────
-
     @Test
-    @DisplayName("findBySubmarine() übergibt Submarine-ID korrekt an Query")
+    @DisplayName("findBySubmarine() uebergibt Submarine-ID korrekt an Query")
     void testFindBySubmarine() {
         Result<Record> emptyResult = mock(Result.class);
         when(emptyResult.iterator()).thenReturn(List.<Record>of().iterator());
@@ -95,10 +87,6 @@ class PhotoRepositoryTest {
         assertNotNull(result);
         verify(mockDsl).fetch(anyString(), eq(42L));
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // findPhotoData()
-    // ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("findPhotoData() liefert null wenn Foto nicht gefunden")
@@ -125,26 +113,21 @@ class PhotoRepositoryTest {
         assertArrayEquals(expectedBytes, data);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // PhotoMeta Record
-    // ──────────────────────────────────────────────────────────────
-
     @Test
     @DisplayName("PhotoMeta Record speichert alle Felder korrekt")
     void testPhotoMetaRecord() {
         PhotoRepository.PhotoMeta meta = new PhotoRepository.PhotoMeta(
                 1L, 2L, "Sub-42", 10, 20, -50, 0, 1, 0, "2025-01-01");
 
-        assertEquals(1L,     meta.id());
-        assertEquals(2L,     meta.diveId());
-        assertEquals("Sub-42", meta.submarineName());
-        assertEquals(10,     meta.x());
-        assertEquals(20,     meta.y());
-        assertEquals(-50,    meta.z());
-        assertEquals(0,      meta.dirX());
-        assertEquals(1,      meta.dirY());
-        assertEquals(0,      meta.dirZ());
+        assertEquals(1L,           meta.id());
+        assertEquals(2L,           meta.diveId());
+        assertEquals("Sub-42",     meta.submarineName());
+        assertEquals(10,           meta.x());
+        assertEquals(20,           meta.y());
+        assertEquals(-50,          meta.z());
+        assertEquals(0,            meta.dirX());
+        assertEquals(1,            meta.dirY());
+        assertEquals(0,            meta.dirZ());
         assertEquals("2025-01-01", meta.timestamp());
     }
 }
-
